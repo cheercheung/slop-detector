@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>LinkedIn comments · extension test</title><style>
+body{margin:0;background:#f4f2ee;color:#222;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:560px;margin:24px auto}.post{background:white;padding:20px;margin-bottom:24px;border:1px solid #ddd;border-radius:9px}.comment{background:#f5f5f5;padding:12px;margin:16px 0;border-radius:9px}.reply{margin-left:26px;background:#e8edf0}p{line-height:1.5;margin:10px 0}.author{font-weight:650}.actions{color:#666;font-size:12px}button{margin-right:8px}.spacer{height:1100px}
+.comment p{padding-inline:8px}.comments-comment-item__main-content{padding-inline:9px}
+</style></head><body><main>
+<div class="post" data-case="modern-post" role="listitem" componentkey="update-card-focusComments">
+<div class="author">Post author</div><p><span data-testid="expandable-text-box">I tested three database indexes this morning.</span></p>
+<div componentkey="replaceableCommentToolsComments">
+<div class="comment" data-case="modern-comment" id="replaceableComment_urn:li:comment:(activity:9000,9001)" componentkey="replaceableComment_urn:li:comment:(activity:9000,9001)">
+<div class="author">Comment author · 99% profile metadata must stay out</div><p><span data-testid="expandable-text-box">99% of comment writers need this game-changing framework.<button>…more</button></span></p><div class="actions"><button>Like</button><button>Reply</button></div>
+<div componentkey="replaceableComment_urn:li:comment:(activity:9000,9002)" data-case="duplicate-wrapper">
+<div class="comment reply" data-case="modern-reply" id="replaceableComment_urn:li:comment:(activity:9000,9002)" componentkey="replaceableComment_urn:li:comment:(activity:9000,9002)">
+<div class="author">Reply author</div><p><span data-testid="expandable-text-box">Did you measure the query plan before adding the index?</span></p><div class="actions"><button>Like</button><button>Reply</button></div>
+</div></div>
+</div>
+<div contenteditable="true" role="textbox"><div class="comments-comment-item"><span data-testid="expandable-text-box">99% PRIVATE DRAFT must never be sent</span></div></div>
+<div data-case="load-more"></div>
+<div class="comment" data-case="collapsed-comment" hidden id="replaceableComment_urn:li:comment:(activity:9000,9003)"><p><span data-testid="expandable-text-box">A collapsed comment becomes visible when opened.</span></p></div>
+</div></div>
+<div class="spacer"></div>
+<div class="post feed-shared-update-v2" data-case="legacy-post" data-urn="urn:li:activity:9100">
+<div class="author">Classic post author</div><div class="update-components-text">99% of founders should adopt this revolutionary strategy.</div>
+<div class="comments-comments-list">
+<div class="comment comments-comment-item" data-case="legacy-comment" data-id="urn:li:comment:(activity:9100,9101)"><div class="author">Classic commenter</div><div class="comments-comment-item__main-content"><span class="comments-comment-item-content-body">My test returned four rows using that index.</span></div><div class="actions"><button>Like</button><button>Reply</button></div>
+<div class="comments-comments-list">
+<div class="comment reply comments-comment-item" data-case="legacy-reply" data-id="urn:li:comment:(activity:9100,9102)"><div class="author">Classic reply author</div><div class="comments-comment-item-content-body">99% of replies contain this life-changing advice.</div><div class="actions"><button>Like</button><button>Reply</button></div></div>
+</div></div>
+</div></div>
+</main></body></html>

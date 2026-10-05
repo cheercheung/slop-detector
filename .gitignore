@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-test/
+test-results/
+*.zip
+.wrangler/
+.dev.vars*
+.env*
+proxy.config.json

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>LinkedIn · extension test fixture</title><style>
+body{margin:0;background:#f4f2ee;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#222}header{padding:18px;background:white;border-bottom:1px solid #ddd;font-weight:700;color:#0a66c2}main{width:560px;margin:24px auto}.card{background:#fff;border:1px solid #ddd;border-radius:9px;padding:20px;margin-bottom:16px;min-height:130px}.author{font-weight:650;margin-bottom:12px}p{line-height:1.6}.actions{margin-top:15px;border-top:1px solid #ddd;padding-top:10px;color:#777;font-size:13px}.spacer{height:1100px}h2{font-size:11px;font-weight:400;color:#888}.comments-comment-item{font-size:12px;border-top:1px solid #ddd;color:#777}
+/* Real feed cards often pad only the text wrapper, leaving sibling labels flush to the edge. */
+#li-modern,#li-legacy{padding-inline:0}
+#li-modern p{padding-inline:24px}
+#li-modern h2,#li-modern .author,#li-modern .actions,#li-legacy>.author,#li-legacy>.actions{margin-inline:24px}
+#li-legacy>.feed-shared-update-v2__description{padding-inline:16px}
+#li-legacy>.feed-shared-update-v2__description>.update-components-text{margin-inline:8px}
+@media(max-width:1000px){#li-modern p{padding-inline:12px}}
+</style></head><body><header>in &nbsp; LinkedIn · test feed</header><main role="list">
+<div class="card" id="li-modern" role="listitem" componentkey="update-card-focusExample_AFeedType_MAIN_FEED_RELEVANCE"><div data-display-contents="true"><div componentkey="Example_A"><h2>Feed post</h2><div class="author">Morgan · Engineer</div><p><span data-testid="expandable-text-box" tabindex="-1">I profiled our build and cut compilation time from 48 to 19 seconds.<button data-testid="expandable-text-button" aria-hidden="true">…more</button></span></p><div class="actions">Like · Comment · Repost · Send</div><div componentkey="replaceableCommentToolsExample_A"><p><span data-testid="expandable-text-box">99% this is a comment and must never be classified as the post.</span></p></div></div></div></div>
+<div class="card feed-shared-update-v2" id="li-legacy" data-urn="urn:li:activity:8002"><div class="author">Taylor · Founder</div><div class="feed-shared-update-v2__description"><div class="update-components-text"><span>99% of professionals need this framework. Unlock your potential today.</span><button>…see more</button></div></div><div class="feed-shared-update-v2" data-urn="urn:li:activity:7000"><div class="update-components-text">A quoted post must not create an extra badge.</div></div><div class="actions">Like · Comment · Repost · Send</div></div>
+<div class="card" id="li-media" role="listitem" componentkey="update-card-focusExample_C"><h2>Feed post</h2><div class="author">Alex · Photographer</div><div class="update-components-image">Image-only post</div><div class="comments-comment-item" id="li-photo-comment"><div class="update-components-text">A comment on a photo is not the post.</div></div></div>
+<div class="spacer"></div>
+<div class="card" id="li-below" data-view-name="feed-full-update"><div class="author">Casey · Designer</div><p><span data-testid="expandable-text-box">A new post appears after scrolling through the feed.</span></p><div class="actions">Like · Comment · Repost · Send</div></div>
+</main></body></html>

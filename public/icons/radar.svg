@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <title>Slop Detector radar</title>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="#1C1C1C"/>
+  <path d="M64 64V25a39 39 0 0 1 27.577 11.423Z" fill="#FFF" fill-opacity=".12"/>
+  <circle cx="64" cy="64" r="39" stroke="#F5F5F5" stroke-width="5.5"/>
+  <circle cx="64" cy="64" r="21" stroke="#A6A6A6" stroke-width="5"/>
+  <path d="M64 64 91.577 36.423" stroke="#FFF" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="41" cy="82" r="5.5" fill="#FFF" stroke="#1C1C1C" stroke-width="3"/>
+</svg>

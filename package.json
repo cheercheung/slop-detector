@@ -1,0 +1,38 @@
+{
+  "name": "slop-detector",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p proxy/tsconfig.json",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:browser": "node tests/browser.mjs && node tests/viewport.mjs && node tests/loading.mjs",
+    "check": "npm run typecheck && npm test && npm run build && npm run test:browser && npm run test:proxy && npm run test:gptzero",
+    "package": "npm run build && node scripts/package.mjs",
+    "configure:proxy": "node scripts/configure-proxy.mjs",
+    "proxy:login": "wrangler login",
+    "proxy:dev": "wrangler dev --config proxy/wrangler.jsonc",
+    "proxy:deploy": "wrangler deploy --config proxy/wrangler.jsonc",
+    "test:proxy": "node tests/proxy.mjs",
+    "test:gptzero": "node tests/gptzero-browser.mjs"
+  },
+  "dependencies": {
+    "@ai-sdk/gateway": "4.0.86",
+    "@openrouter/ai-sdk-provider": "3.1.0",
+    "ai": "7.0.106",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260930.2",
+    "@resvg/resvg-js": "2.6.2",
+    "@types/chrome": "^0.1.0",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "miniflare": "5.20260930.0-alpha",
+    "playwright": "^1.55.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "wrangler": "4.145.0"
+  }
+}
