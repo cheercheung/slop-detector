@@ -2,7 +2,7 @@
 
 This is a small Cloudflare Worker with a SQLite Durable Object for quotas and a score cache. It does not need Vercel, Upstash, a separate database account, or a paid Cloudflare plan. Version 2.1.0 of the extension uses the public proxy URL; the GPTZero API key stays in Cloudflare Secrets.
 
-The code is ready, but **nothing has been deployed to your account**. GPTZero is disabled in the deployment config until you explicitly enable it. The local `dist` build supports Jev now; configure the proxy URL and rebuild to enable GPTZero.
+The current deployment is live at `https://slop-detector-proxy.whirl-intelligence.workers.dev`. Sponsored scanning is enabled for the local Chrome extension `jhlbmippncgmiflimjllpbekdpnofcke`. On 5 October 2026, its CORS preflight, quota lookup, and one live GPTZero classification were verified successfully. The steps below cover setup on another account or extension installation.
 
 ## 1. Log in and create the Worker
 
@@ -93,7 +93,7 @@ Secrets and existing quota records survive normal deployments. Keep the Worker n
 ## 5. Start scanning
 
 1. Open the Slop Detector popup and select **GPTZero**.
-2. Click **Enable GPTZero** and approve access to your proxy host.
+2. Select the **GPTZero** tab and approve access to your proxy host.
 3. The popup should show the weekly allowance. Enabling checks the proxy without making a paid GPTZero evaluation.
 4. Refresh X or LinkedIn, then scroll. A visible readable post will make the first real GPTZero call.
 5. Choose **Jev** whenever you want your own prompt. Existing Jev keys and prompts remain saved. The extension never silently switches to a paid personal key after a quota failure.
@@ -136,4 +136,8 @@ npm run test:proxy
 npm run test:gptzero
 ```
 
-The proxy test runs the actual Cloudflare runtime and SQLite Durable Object with mocked GPTZero responses. The GPTZero browser test runs the extension through a temporary local HTTPS proxy into that Worker. It uses an isolated Chrome profile and a one-day test certificate; nothing is deployed or billed. Jev transport, permissions, layout and viewport regression tests also use mocks. The sponsored key has not been live-tested until you complete setup.
+The proxy test runs the actual Cloudflare runtime and SQLite Durable Object with mocked GPTZero responses. The GPTZero browser test runs the extension through a temporary local HTTPS proxy into that Worker. It uses an isolated Chrome profile and a one-day test certificate; nothing is deployed or billed. Jev transport, permissions, layout and viewport regression tests also use mocks. The current deployed sponsored key also passed a live sample classification on 5 October 2026.
+
+## Score interpretation in extension 2.1.2
+
+The extension now derives its GPTZero Slop score from the AI class probability alone and requires an AI classification. Mixed and Human results do not trigger Slop effects. The v1 proxy wire format retains its original aggregate `probability` for compatibility with older installations; updated extensions derive the new score from the accompanying `gptzero.probabilities`. Both local and proxy caches are handled without spending another evaluation. No Worker redeploy or cache reset is required for this extension update.

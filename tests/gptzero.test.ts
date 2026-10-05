@@ -3,8 +3,8 @@ import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { QuotaStore } from '../proxy/quota';
 import { periods, readLimits } from '../proxy/limits';
-import { parseGptzeroResponse, validUsage } from '../src/gptzero-schema';
-import { DEFAULT_SETTINGS, detectionChanged, postContentKey, type Classification } from '../src/shared';
+import { normalizeGptzeroVerdict, parseGptzeroResponse, validUsage } from '../src/gptzero-schema';
+import { DEFAULT_SETTINGS, detectionChanged, isSlopVerdict, postContentKey, type Classification } from '../src/shared';
 
 const now = Date.UTC(2026, 8, 30, 12);
 const sample = { documents: [{ predicted_class: 'mixed', class_probabilities: { human: 0.1, ai: 0.2, mixed: 0.7 }, confidence_category: 'high', inputText: 'never persist this', completely_generated_prob: 0.01 }] };
@@ -24,7 +24,7 @@ function database() {
 }
 
 test('GPTZero uses documented three-class probabilities, sanitizes output and isolates Jev prompts', () => {
-  assert.ok(Math.abs(verdict.probability - 0.9) < 0.00001);
+  assert.equal(verdict.probability, 0.2);
   assert.equal(verdict.gptzero?.classification, 'mixed');
   assert.equal(JSON.stringify(verdict).includes('never persist'), false);
   for (const data of [{}, { documents: [{}] }, { documents: [{ ...sample.documents[0], class_probabilities: { human: -1, mixed: 1, ai: 1 } }] }, { documents: [{ ...sample.documents[0], class_probabilities: { human: 0.2, mixed: 0.2, ai: 0.2 } }] }]) assert.throws(() => parseGptzeroResponse(data, now, now));
@@ -36,6 +36,27 @@ test('GPTZero uses documented three-class probabilities, sanitizes output and is
   assert.equal(detectionChanged(DEFAULT_SETTINGS, { ...DEFAULT_SETTINGS, detector: 'jev' }), true);
   assert.ok(validUsage({ limit: 0, remaining: 0, used: 1, resetsAt: now }));
   assert.equal(validUsage({ limit: 1000, used: 5, remaining: 1000, resetsAt: now }), false);
+});
+
+test('only GPTZero AI classifications can be Slop; mixed and AI-polished stay clean even at low thresholds', () => {
+  const rate = (classification: string, human: number, mixed: number, ai: number) => parseGptzeroResponse({ documents: [{ document_classification: classification, class_probabilities: { human, mixed, ai } }] }, now, now);
+  const polished = rate('MIXED', 0, 1, 0);
+  assert.equal(polished.probability, 0);
+  assert.equal(isSlopVerdict(polished, 0.7), false);
+  assert.equal(isSlopVerdict(rate('MIXED', 0.1, 0.5, 0.4), 0.35), false);
+  assert.equal(isSlopVerdict(rate('HUMAN_ONLY', 0.6, 0.05, 0.35), 0.35), false);
+  const ai = rate('AI_ONLY', 0.03, 0.07, 0.9);
+  assert.equal(isSlopVerdict(ai, 0.9), true);
+  assert.equal(isSlopVerdict(rate('AI_ONLY', 0.1, 0.25, 0.65), 0.7), false, 'Mixed probability cannot push AI over the threshold');
+  assert.equal(isSlopVerdict({ probability: 0.7, evaluatedAt: now, latencyMs: 1 }, 0.7), true, 'Jev still uses its prompt score');
+});
+
+test('legacy proxy and cached GPTZero scores are corrected without changing their age', () => {
+  const legacy = { ...verdict, probability: 0.9 };
+  assert.deepEqual(normalizeGptzeroVerdict(legacy), verdict);
+  assert.deepEqual(normalizeGptzeroVerdict(verdict), verdict);
+  assert.throws(() => normalizeGptzeroVerdict({ ...legacy, probability: 0.5 }));
+  assert.throws(() => normalizeGptzeroVerdict({ ...legacy, gptzero: undefined }));
 });
 
 test('quota reservation is atomic, persists across instances, and resets at Monday UTC', async () => {

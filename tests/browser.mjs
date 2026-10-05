@@ -47,7 +47,7 @@ try {
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
   await popup.locator('#detector-jev').click();
   await popup.waitForFunction(() => document.querySelector('#detector-jev').getAttribute('aria-pressed') === 'true');
-  await popup.waitForFunction(() => document.querySelector('#status-title').textContent === 'Add an API key to start using Slop Detector');
+  await popup.waitForFunction(() => document.querySelector('#key-status').textContent === 'Add key');
   await popup.setViewportSize({ width: 360, height: 600 });
   await popup.evaluate(() => document.fonts.ready);
   assert.equal(await popup.locator('#threshold').inputValue(), '70');
@@ -83,11 +83,11 @@ try {
   await feed.bringToFront();
   await feed.waitForFunction(() => document.querySelector('#one jev-slop-label')?.shadowRoot.textContent.includes('Not slop'));
   assert.match(await badge('one').innerText(), /88%/);
-  assert.equal(await badge('one').getAttribute('aria-label'), 'Not slop, 88 percent confidence. Show details.');
-  assert.match(await badge('one').getAttribute('title'), /Not slop: 88% confidence.*\n.*\nJev’s estimate of a “no”/);
+  assert.equal(await badge('one').getAttribute('aria-label'), 'Not slop, 88 percent confidence. Open Slop Detector settings.');
+  assert.equal(await badge('one').getAttribute('title'), 'Open Slop Detector settings');
   assert.match(await badge('two').innerText(), /Slop/);
   assert.match(await badge('three').innerText(), /Not slop/);
-  assert.match(await badge('media').innerText(), /Unrated/);
+  assert.equal(await badge('media').isVisible(), false);
   assert.match(await badge('below').getAttribute('aria-label'), /Queued/);
   assert.equal(await worker.evaluate(() => globalThis.__requests.length), 4);
   assert.deepEqual(await worker.evaluate(() => [...globalThis.__providerGrants]), [providerOrigins[0]]);
@@ -148,14 +148,38 @@ try {
   assert.ok(await stampInstance.evaluate(element => element === document.querySelector('#two jev-slop-stamp')));
   assert.ok(await feed.locator('#two jev-slop-stamp .impact').evaluate(element => element.getAnimations().every(animation => animation.playState === 'finished')));
   console.log('PASS: giant stamp lands once, stays inside the post, and allows clicks through');
-  console.log('PASS: real extension labels visible posts, leaves media-only unrated, defers offscreen posts');
+  console.log('PASS: real extension labels visible posts, leaves media-only items unmarked, defers offscreen posts');
 
-  await badge('two').click();
-  assert.match(await feed.locator('#two jev-slop-label .details').innerText(), /Is this an automated, AI-generated or otherwise low-effort post that offers little value\?/);
+  // Force the compatibility fallback and verify real label clicks open the
+  // extension's settings without navigating the post or changing its height.
+  await popup.goto('about:blank');
+  await worker.evaluate(() => {
+    globalThis.__openPopup = chrome.action.openPopup;
+    chrome.action.openPopup = async () => { throw new Error('Exercise settings-tab fallback'); };
+  });
+  for (const id of ['one', 'two']) {
+    await feed.bringToFront();
+    const before = await feed.locator(`#${id}`).boundingBox();
+    const settingsOpened = context.waitForEvent('page');
+    if (id === 'one') { await badge(id).focus(); await badge(id).press('Enter'); }
+    else await badge(id).click();
+    const settingsPage = await settingsOpened;
+    await settingsPage.waitForURL(`chrome-extension://${extensionId}/popup.html`);
+    await settingsPage.locator('#threshold').waitFor();
+    assert.equal(await settingsPage.locator('#threshold').inputValue(), '70');
+    assert.equal(await feed.locator('jev-slop-label .details').count(), 0);
+    assert.equal((await feed.locator(`#${id}`).boundingBox()).height, before.height);
+    assert.equal(feed.url(), 'https://x.com/home');
+    await settingsPage.close();
+  }
+  await worker.evaluate(() => { chrome.action.openPopup = globalThis.__openPopup; });
+  await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+  await feed.bringToFront();
+  console.log('PASS: Slop and Not slop open settings by click or keyboard without changing post layout');
   await feed.locator('#below').scrollIntoViewIfNeeded();
   await feed.waitForFunction(() => document.querySelector('#below jev-slop-label')?.shadowRoot.querySelector('button').textContent.includes('Not slop'));
   assert.equal(await worker.evaluate(() => globalThis.__requests.length), 5);
-  console.log('PASS: scrolling triggers classification and badges expose score details');
+  console.log('PASS: scrolling triggers classification');
 
   await feed.evaluate(() => {
     const article = document.querySelector('#below');
@@ -200,7 +224,7 @@ try {
   await popup.locator('#threshold').dispatchEvent('change');
   await feed.waitForFunction(() => document.querySelector('#below jev-slop-label')?.shadowRoot.querySelector('button').textContent.startsWith('Slop'));
   assert.match(await badge('below').innerText(), /58%/);
-  assert.equal(await badge('below').getAttribute('aria-label'), 'Slop, 58 percent confidence. Show details.');
+  assert.equal(await badge('below').getAttribute('aria-label'), 'Slop, 58 percent confidence. Open Slop Detector settings.');
   assert.equal(await worker.evaluate(() => globalThis.__requests.length), 7);
   assert.equal(await feed.locator('#below jev-slop-stamp').count(), 1);
   console.log('PASS: threshold reclassifies cached scores without API calls');
@@ -242,7 +266,7 @@ try {
   await popup.locator('#connection').evaluate(element => { element.open = true; });
   await popup.locator('#api-key').fill('replacement-test-gateway-key');
   await popup.locator('#connect').click();
-  await popup.waitForFunction(() => document.querySelector('#message').textContent.startsWith('Connected.'));
+  await popup.waitForFunction(() => document.querySelector('#key-status').textContent === 'Connected' && !document.querySelector('#connect').disabled);
   await feed.waitForFunction(() => document.querySelector('#below jev-slop-label')?.shadowRoot.querySelector('button').textContent.includes('Not slop'));
   await popup.locator('#threshold').fill('70');
   await popup.locator('#threshold').dispatchEvent('change');
@@ -310,7 +334,7 @@ try {
   await linkedin.setViewportSize({ width: 1160, height: 960 });
   await aligned(linkedin, '#li-modern', '[data-testid="expandable-text-box"]');
   assert.match(await liBadge('li-legacy').innerText(), /^Slop/);
-  assert.match(await liBadge('li-media').innerText(), /Unrated/);
+  assert.equal(await liBadge('li-media').isVisible(), false);
   assert.equal(await linkedin.locator('#li-legacy jev-slop-label').count(), 1);
   assert.equal(await linkedin.locator('#li-legacy jev-slop-stamp').count(), 1);
   assert.equal(await linkedin.locator('#li-modern jev-slop-stamp, #li-media jev-slop-stamp').count(), 0);
@@ -337,6 +361,36 @@ try {
   await linkedin.waitForFunction(() => document.querySelector('#li-below jev-slop-label')?.shadowRoot.querySelector('button').textContent.includes('94%'));
   await popup.locator('#theme').selectOption('fade');
   await linkedin.waitForFunction(() => document.querySelector('#li-below').getAttribute('data-jev-dim') === 'true');
+  await linkedin.bringToFront();
+  await linkedin.mouse.move(1, 1);
+  await linkedin.waitForFunction(() => getComputedStyle(document.querySelector('#li-below [data-testid="expandable-text-box"]')).opacity === '0.38');
+  const fadeDuringUpdates = await linkedin.evaluate(async () => {
+    const text = document.querySelector('#li-below [data-testid="expandable-text-box"]');
+    const actions = document.querySelector('#li-below .actions');
+    const original = actions.textContent;
+    let updates = 0;
+    const timer = setInterval(() => { actions.textContent = `${original} · ${++updates} reactions`; }, 160);
+    const samples = [];
+    const start = performance.now();
+    await new Promise(resolve => {
+      const sample = () => {
+        samples.push(Number(getComputedStyle(text).opacity));
+        if (performance.now() - start < 1600) requestAnimationFrame(sample);
+        else resolve();
+      };
+      requestAnimationFrame(sample);
+    });
+    clearInterval(timer); actions.textContent = original;
+    return { updates, maxOpacity: Math.max(...samples) };
+  });
+  assert.ok(fadeDuringUpdates.updates >= 5);
+  assert.ok(fadeDuringUpdates.maxOpacity <= 0.381, `Feed updates must not flash faded text: ${fadeDuringUpdates.maxOpacity}`);
+  await linkedin.evaluate(() => {
+    const media = document.createElement('div'); media.className = 'update-components-image'; media.id = 'late-media'; media.textContent = 'Newly loaded image';
+    document.querySelector('#li-below .actions').before(media);
+  });
+  await linkedin.waitForFunction(() => getComputedStyle(document.querySelector('#late-media')).opacity === '0.38');
+  console.log('PASS: faded LinkedIn posts stay at steady opacity during feed updates; new media also fades');
   await popup.locator('#enabled').click();
   await linkedin.waitForFunction(() => document.querySelector('#li-below jev-slop-label')?.shadowRoot.querySelector('button').textContent.includes('paused'));
   await popup.locator('#enabled').click();
@@ -508,8 +562,6 @@ try {
   await waitVerdict(replies, '#x-loaded-reply', 'Not slop');
   assert.match(await replies.locator('#x-loaded-reply jev-slop-label .badge').innerText(), /83%/);
   assert.equal(await replies.locator('#x-loaded-reply jev-slop-stamp').count(), 0);
-  await replies.locator('#x-loaded-reply jev-slop-label .badge').click();
-  assert.match(await replies.locator('#x-loaded-reply jev-slop-label .details').innerText(), /Question: Is this a sales pitch\?/);
   const custom = await worker.evaluate(() => globalThis.__requests.filter(r => r.body.questions.aiGenerated.instructions === 'Is this a sales pitch?'));
   assert.ok(custom.some(r => r.body.state === '99% of newly loaded X replies are pure inspiration.'));
   await popup.reload();
@@ -526,7 +578,7 @@ try {
   assert.match(await replies.locator('#x-loaded-reply jev-slop-label .badge').innerText(), /83%/);
   await popup.locator('#reset-prompt').click();
   await waitVerdict(replies, '#x-loaded-reply', 'Slop');
-  console.log('PASS: custom prompts persist, invalidate scores, update details and reject stale results');
+  console.log('PASS: custom prompts persist, invalidate scores and reject stale results');
 
   await popup.locator('#prompt-section').evaluate(element => { element.open = false; });
   await popup.locator('#connection').evaluate(element => { element.open = true; });
@@ -535,7 +587,7 @@ try {
     await waitVerdict(replies, '#x-loaded-reply', 'Connect Jev');
     await popup.locator('#api-key').fill(`test-only-${name}-key`);
     await popup.locator('#connect').click();
-    await popup.waitForFunction(() => document.querySelector('#message').textContent.startsWith('Connected.'));
+    await popup.waitForFunction(() => document.querySelector('#key-status').textContent === 'Connected' && !document.querySelector('#connect').disabled);
     await replies.bringToFront();
     await waitVerdict(replies, '#x-loaded-reply', 'Slop');
     await popup.locator('#connection').evaluate(element => { element.open = true; });
@@ -555,7 +607,7 @@ try {
   assert.equal(publicState.keyStatus, undefined);
   await worker.evaluate(origin => { globalThis.__providerGrants.delete(origin); globalThis.__denyNextPermission = true; }, providerOrigins[0]);
   await popup.locator('#provider').selectOption('gateway');
-  await popup.waitForFunction(() => document.querySelector('#message').textContent.includes('provider has not changed') && !document.querySelector('#provider').disabled);
+  await popup.waitForFunction(() => document.querySelector('#message').textContent.includes('was not granted') && !document.querySelector('#provider').disabled);
   assert.equal(await popup.locator('#provider').inputValue(), 'jev');
   assert.equal(await worker.evaluate(() => chrome.storage.local.get('settings').then(data => data.settings.provider)), 'jev');
   console.log('PASS: denying access while switching to a saved provider preserves the current provider');
@@ -619,7 +671,7 @@ try {
   await popup.reload();
   await popup.waitForFunction(() => !document.querySelector('#cancel-connection').hidden);
   assert.equal(await popup.locator('#connect').isDisabled(), true);
-  assert.match(await popup.locator('#message').innerText(), /Checking your AI Gateway key/);
+  assert.equal(await popup.locator('#connect').innerText(), 'Checking…');
   await popup.locator('body').screenshot({ path: 'test-results/popup-checking.png' });
   await popup.locator('#cancel-connection').click();
   await popup.waitForFunction(() => !document.querySelector('#connect').disabled);

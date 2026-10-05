@@ -14,9 +14,20 @@ export function parseGptzeroResponse(value: unknown, started: number, now = Date
   const classification = doc?.predicted_class ?? ({ HUMAN_ONLY: 'human', MIXED: 'mixed', AI_ONLY: 'ai' } as Record<string, string>)[doc?.document_classification];
   const result = { classification, probabilities: raw && { human: raw.human, mixed: raw.mixed, ai: raw.ai }, ...(doc?.confidence_category ? { confidence: doc.confidence_category } : {}) };
   if (!validGptzeroResult(result)) throw new Error('INVALID_MODEL_RESPONSE');
-  // Preserve all three classes; the existing binary label represents any AI
-  // involvement (AI + mixed), not the deprecated completely_generated_prob.
-  return { probability: Math.min(1, result.probabilities.ai + result.probabilities.mixed), evaluatedAt: now, latencyMs: now - started, gptzero: result };
+  // Mixed includes human writing polished with AI. Only the AI class contributes
+  // to the Slop score; these probabilities are not proportions of AI-written words.
+  return { probability: result.probabilities.ai, evaluatedAt: now, latencyMs: now - started, gptzero: result };
+}
+export function normalizeGptzeroVerdict(value: unknown): Verdict {
+  const v = value as Verdict | undefined;
+  if (!v || !validGptzeroResult(v.gptzero) || !probability(v.probability) ||
+      !Number.isFinite(v.evaluatedAt) || v.evaluatedAt < 0 || !Number.isFinite(v.latencyMs) || v.latencyMs < 0) throw new Error('Invalid GPTZero score');
+  const ai = v.gptzero.probabilities.ai;
+  // The deployed v1 proxy and existing caches carry AI + mixed. Accept that
+  // wire format as well as AI-only scores, but always derive our score from AI.
+  const legacy = Math.min(1, ai + v.gptzero.probabilities.mixed);
+  if (Math.abs(v.probability - ai) > 0.000001 && Math.abs(v.probability - legacy) > 0.000001) throw new Error('Invalid GPTZero score');
+  return { probability: ai, evaluatedAt: v.evaluatedAt, latencyMs: v.latencyMs, gptzero: v.gptzero };
 }
 export function validUsage(value: unknown): value is GptzeroUsage {
   const v = value as GptzeroUsage | undefined;

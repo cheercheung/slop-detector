@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Slop Detector \u00b7 X & LinkedIn",
-  "version": "2.1.0",
+  "version": "2.1.2",
   "description": "Spot AI-generated posts with GPTZero, or use Jev with your own prompt. Scores, stamps and filtering for X and LinkedIn.",
   "minimum_chrome_version": "120",
   "permissions": [
@@ -16,11 +16,16 @@
   "optional_host_permissions": [
     "https://ai-gateway.vercel.sh/*",
     "https://openrouter.ai/*",
-    "https://api.typesafe.ai/*"
+    "https://api.typesafe.ai/*",
+    "https://api.gptzero.me/*"
   ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
+  },
+  "options_ui": {
+    "page": "popup.html",
+    "open_in_tab": true
   },
   "action": {
     "default_title": "Slop Detector",
@@ -51,6 +56,6 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; connect-src https://ai-gateway.vercel.sh https://openrouter.ai https://api.typesafe.ai"
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src https://ai-gateway.vercel.sh https://openrouter.ai https://api.typesafe.ai https://api.gptzero.me"
   }
 }

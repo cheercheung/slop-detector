@@ -66,59 +66,62 @@ try {
     await page.evaluate(() => document.fonts.ready);
     const pending = await page.evaluate(geometry);
     const baseline = await page.evaluate(() => window.beforeLabels);
-    if (!showNotSlop) sameGeometry(pending, baseline, `${key} adding radar`);
-    const state = await page.locator('#one jev-slop-label').evaluate(host => {
-      const button = host.shadowRoot.querySelector('.badge');
-      const radar = host.shadowRoot.querySelector('.radar');
-      const title = host.shadowRoot.querySelector('.label-text');
-      return {
-        animation: getComputedStyle(radar.querySelector('.radar-sweep')).animationName,
-        color: getComputedStyle(button).color, border: getComputedStyle(button).borderTopWidth,
-        titleWidth: title.getBoundingClientRect().width, label: button.getAttribute('aria-label'),
-        position: getComputedStyle(host).position, height: host.getBoundingClientRect().height,
-        radarBox: radar.getBoundingClientRect().toJSON(), textBox: document.querySelector('#one .text').getBoundingClientRect().toJSON(),
-      };
-    });
-    assert.equal(state.animation, 'radar-sweep');
-    assert.equal(state.border, '0px');
-    assert.equal(state.titleWidth, 1, 'Loading copy is accessible without appearing in the feed');
-    assert.equal(state.label, 'Checking with Jev');
-    assert.equal(state.position, showNotSlop ? 'relative' : 'absolute');
-    assert.equal(state.height, showNotSlop ? 24 : 0);
-    assert.ok(state.radarBox.x >= state.textBox.x && state.radarBox.right <= state.textBox.right);
+    if (!showNotSlop) sameGeometry(pending, baseline, `${key} checking silently`);
     if (!showNotSlop) {
-      assert.ok(Math.abs(state.radarBox.x - state.textBox.x - 26) < 0.1, 'Floating radar aligns with the start of the padded text column');
-      assert.ok(Math.abs(state.radarBox.y - state.textBox.bottom - 3) < 0.1, `Floating radar sits immediately below the text: gap ${state.radarBox.y - state.textBox.bottom}`);
+      for (const id of ['one', 'two', 'offscreen-post']) {
+        assert.equal(await page.locator(`#${id} jev-slop-label`).isVisible(), false, 'Checking and queued indicators stay hidden');
+      }
+      assert.equal(await page.locator('[data-jev-radar-anchor]').count(), 0);
+    } else {
+      const state = await page.locator('#one jev-slop-label').evaluate(host => {
+        const button = host.shadowRoot.querySelector('.badge');
+        const radar = host.shadowRoot.querySelector('.radar');
+        const title = host.shadowRoot.querySelector('.label-text');
+        return {
+          animation: getComputedStyle(radar.querySelector('.radar-sweep')).animationName,
+          color: getComputedStyle(button).color, border: getComputedStyle(button).borderTopWidth,
+          titleWidth: title.getBoundingClientRect().width, label: button.getAttribute('aria-label'),
+          position: getComputedStyle(host).position, height: host.getBoundingClientRect().height,
+          radarBox: radar.getBoundingClientRect().toJSON(), textBox: document.querySelector('#one .text').getBoundingClientRect().toJSON(),
+        };
+      });
+      assert.equal(state.animation, 'radar-sweep');
+      assert.equal(state.border, '0px');
+      assert.equal(state.titleWidth, 1, 'Loading copy is accessible without appearing in the feed');
+      assert.equal(state.label, 'Checking with Jev');
+      assert.equal(state.position, 'relative');
+      assert.equal(state.height, 24);
+      assert.ok(state.radarBox.x >= state.textBox.x && state.radarBox.right <= state.textBox.right);
+      // A banner, image or preceding post can change height without resizing this
+      // post or firing a scroll event. The radar must move with its own text.
+      const radarOffset = () => ['one', 'two'].map(id => {
+        const text = document.querySelector(`#${id} .text`).getBoundingClientRect();
+        const radar = document.querySelector(`#${id} jev-slop-label`).shadowRoot.querySelector('.radar').getBoundingClientRect();
+        return { x: radar.x - text.x, y: radar.y - text.bottom };
+      });
+      const beforeMoving = await page.evaluate(radarOffset);
+      await page.evaluate(async () => {
+        document.querySelector('#inserted').style.height = '96px';
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      });
+      const afterMoving = await page.evaluate(radarOffset);
+      afterMoving.forEach((offset, index) => {
+        assert.ok(Math.abs(offset.x - beforeMoving[index].x) < 0.1, 'Radar must stay horizontally attached to its text');
+        assert.ok(Math.abs(offset.y - beforeMoving[index].y) < 0.1, 'Radar must follow its text when the feed moves without scrolling');
+      });
+      await page.evaluate(() => { document.querySelector('#inserted').style.height = '0'; });
+      const queuedAnimation = await page.locator('#offscreen-post jev-slop-label .radar-sweep').evaluate(node => getComputedStyle(node).animationName);
+      assert.equal(queuedAnimation, 'none', 'Queued posts should not animate');
+      await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
+      assert.equal(await page.locator('#one jev-slop-label .radar-sweep').evaluate(node => getComputedStyle(node).animationName), 'none');
+      const darkColor = await page.locator('#one jev-slop-label .badge').evaluate(node => getComputedStyle(node).color);
+      assert.notEqual(darkColor, state.color);
+      await page.emulateMedia({ reducedMotion: 'no-preference', colorScheme: 'light' });
+      if (layout === 'block') await page.screenshot({ path: `test-results/loading-${site}-row.png` });
     }
-    // A banner, image or preceding post can change height without resizing this
-    // post or firing a scroll event. The radar must move with its own text.
-    const radarOffset = () => ['one', 'two'].map(id => {
-      const text = document.querySelector(`#${id} .text`).getBoundingClientRect();
-      const radar = document.querySelector(`#${id} jev-slop-label`).shadowRoot.querySelector('.radar').getBoundingClientRect();
-      return { x: radar.x - text.x, y: radar.y - text.bottom };
-    });
-    const beforeMoving = await page.evaluate(radarOffset);
-    await page.evaluate(async () => {
-      document.querySelector('#inserted').style.height = '96px';
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    });
-    const afterMoving = await page.evaluate(radarOffset);
-    afterMoving.forEach((offset, index) => {
-      assert.ok(Math.abs(offset.x - beforeMoving[index].x) < 0.1, 'Radar must stay horizontally attached to its text');
-      assert.ok(Math.abs(offset.y - beforeMoving[index].y) < 0.1, 'Radar must follow its text when the feed moves without scrolling');
-    });
-    await page.evaluate(() => { document.querySelector('#inserted').style.height = '0'; });
-    const queuedAnimation = await page.locator('#offscreen-post jev-slop-label .radar-sweep').evaluate(node => getComputedStyle(node).animationName);
-    assert.equal(queuedAnimation, 'none', 'Queued posts should not animate');
-    await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
-    assert.equal(await page.locator('#one jev-slop-label .radar-sweep').evaluate(node => getComputedStyle(node).animationName), 'none');
-    const darkColor = await page.locator('#one jev-slop-label .badge').evaluate(node => getComputedStyle(node).color);
-    assert.notEqual(darkColor, state.color);
-    await page.emulateMedia({ reducedMotion: 'no-preference', colorScheme: 'light' });
-    if (layout === 'block') await page.screenshot({ path: `test-results/loading-${site}-${showNotSlop ? 'row' : 'floating'}.png` });
     await worker.evaluate(() => globalThis.__held.splice(0).forEach(resolve => resolve()));
     await page.waitForFunction(() => ['one', 'two'].every(id => document.querySelector(`#${id} jev-slop-label`)?.dataset.tone === 'clean'));
-    sameGeometry(await page.evaluate(geometry), pending, `${key} replacing radar with result`);
+    sameGeometry(await page.evaluate(geometry), pending, `${key} showing result`);
     assert.equal(await page.locator('#one jev-slop-label').evaluate(host => host.hidden), !showNotSlop);
     assert.equal(await page.locator('#one [data-jev-radar-anchor], #two [data-jev-radar-anchor]').count(), 0, 'Finished checks release their temporary positioning anchors');
     console.log(`PASS: ${key} radar → Not slop causes no height or position changes`);

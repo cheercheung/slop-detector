@@ -1,5 +1,5 @@
 import { GPTZERO_PROXY_URL } from './gptzero-config';
-import { validGptzeroResult, validUsage } from './gptzero-schema';
+import { normalizeGptzeroVerdict, validUsage } from './gptzero-schema';
 import type { Classification, GptzeroUsage, GptzeroStatus } from './shared';
 
 let installation = '';
@@ -42,7 +42,7 @@ export async function connectGptzero(signal: AbortSignal) {
     await chrome.storage.local.set({ gptzeroInstallation: installation });
   }
   const data = await request('/v1/usage', {}, signal);
-  if (!validUsage(data.usage)) throw new Error('Free GPTZero scanning is not available yet. Check the proxy setup or use Jev.');
+  if (!validUsage(data.usage)) throw new Error('GPTZero unavailable.');
   signal.throwIfAborted();
   connectedUrl = GPTZERO_PROXY_URL;
   await chrome.storage.local.set({ gptzeroConnection: connectedUrl });
@@ -56,17 +56,14 @@ export async function refreshGptzeroUsage(signal: AbortSignal) {
 export async function evaluateGptzero(text: string, signal: AbortSignal): Promise<Classification> {
   const data = await request('/v1/check', { text }, signal);
   if (data.status === 'ok') {
-    const v = data.verdict;
-    if (!validGptzeroResult(v?.gptzero) || !Number.isFinite(v.probability) ||
-        Math.abs(v.probability - Math.min(1, v.gptzero.probabilities.ai + v.gptzero.probabilities.mixed)) > 0.000001 ||
-        !Number.isFinite(v.evaluatedAt) || v.evaluatedAt < 0 || !Number.isFinite(v.latencyMs) || v.latencyMs < 0) throw new Error('Invalid GPTZero score');
-    return { status: 'ok', verdict: { probability: v.probability, evaluatedAt: Date.now(), latencyMs: v.latencyMs, gptzero: v.gptzero }, cached: data.cached === true };
+    const verdict = normalizeGptzeroVerdict(data.verdict);
+    return { status: 'ok', verdict: { ...verdict, evaluatedAt: Date.now() }, cached: data.cached === true };
   }
   if (data.status === 'busy' && Number.isFinite(data.retryAfter) && data.retryAfter > 0) return { status: 'busy', retryAfter: Math.min(60000, data.retryAfter) };
-  if (data.status === 'unrated') return { status: 'unrated', message: 'GPTZero could not evaluate this text. It may be too short or unsupported.' };
+  if (data.status === 'unrated') return { status: 'unrated', message: 'Unable to rate this text.' };
   if (data.status === 'error' && ['quota', 'rate_limit', 'provider', 'timeout'].includes(data.code)) return {
     status: 'error', code: data.code,
-    message: typeof data.message === 'string' ? data.message.slice(0, 300) : 'GPTZero is temporarily unavailable.',
+    message: ({ quota: 'Free limit reached.', rate_limit: 'GPTZero rate limit reached.', timeout: 'GPTZero request timed out.', provider: 'GPTZero unavailable.' } as Record<string, string>)[data.code],
     retryAfter: Number.isFinite(data.retryAfter) && data.retryAfter > 0 ? Math.min(32 * 86400000, data.retryAfter) : 60000,
   };
   throw new Error('Invalid GPTZero response');

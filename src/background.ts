@@ -1,14 +1,23 @@
 import { evaluatePost, safeError } from './classifier';
-import { GPTZERO_PROXY_ORIGIN } from './gptzero-config';
+import { GPTZERO_API_ORIGIN, GPTZERO_PROXY_ORIGIN } from './gptzero-config';
+import { evaluateGptzeroDirect } from './gptzero-direct';
+import { normalizeGptzeroVerdict } from './gptzero-schema';
 import { loadGptzero, gptzeroStatus, connectGptzero, evaluateGptzero, refreshGptzeroUsage } from './gptzero-client';
-import { DEFAULT_SETTINGS, EMPTY_STATS, MAX_PROMPT, PROVIDERS, PROVIDER_NAMES, PROVIDER_ORIGINS, SITE_PATTERNS, detectionChanged, isProvider, hasReadableText, isSupportedUrl, normalizeSettings, parsePost, postContentKey, type Classification, type ConnectionCheckStatus, type ConnectionCheckResult, type KeyStatus, type Provider, type Post, type PublicSettings, type Settings, type Stats, type Verdict } from './shared';
+import { DEFAULT_SETTINGS, EMPTY_STATS, MAX_PROMPT, PROVIDERS, PROVIDER_NAMES, PROVIDER_ORIGINS, SITE_PATTERNS, detectionChanged, isProvider, hasReadableText, isSupportedUrl, normalizeSettings, parsePost, postContentKey, type Classification, type ConnectionCheckStatus, type ConnectionCheckResult, type KeyStatus, type KeyProvider, type Post, type PublicSettings, type Settings, type Stats, type Verdict } from './shared';
 
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 const MAX_CACHE = 800;
 let settings: Settings = { ...DEFAULT_SETTINGS };
-let keys: Partial<Record<Provider, string>> = {};
+const KEY_PROVIDERS = [...PROVIDERS, 'gptzero'] as const;
+const KEY_ORIGINS = { ...PROVIDER_ORIGINS, gptzero: GPTZERO_API_ORIGIN };
+const KEY_NAMES = { ...PROVIDER_NAMES, gptzero: 'GPTZero' };
+let keys: Partial<Record<KeyProvider, string>> = {};
 let permissionStatus: KeyStatus = { gateway: false, openrouter: false, jev: false };
 let gptzeroPermission = false;
+let gptzeroDirectPermission = false;
+function keyPermission(provider: KeyProvider) { return provider === 'gptzero' ? gptzeroDirectPermission : permissionStatus[provider]; }
+function activeKeyProvider(): KeyProvider { return settings.detector === 'gptzero' ? 'gptzero' : settings.provider; }
+function zeroStatus() { return { ...gptzeroStatus(gptzeroPermission), personalKeySaved: !!keys.gptzero, personalPermissionGranted: gptzeroDirectPermission }; }
 let nextGptzeroStart = 0;
 let gptzeroConnecting = false;
 let permissionTask: Promise<void> = Promise.resolve();
@@ -17,11 +26,13 @@ function refreshProviderAccess(): Promise<void> {
     const granted = await Promise.all(PROVIDERS.map(provider => chrome.permissions.contains({ origins: [PROVIDER_ORIGINS[provider]] })));
     const previous = permissionStatus;
     const previousGptzero = gptzeroPermission;
+    const previousDirect = gptzeroDirectPermission;
     gptzeroPermission = !!GPTZERO_PROXY_ORIGIN && await chrome.permissions.contains({ origins: [GPTZERO_PROXY_ORIGIN] });
+    gptzeroDirectPermission = await chrome.permissions.contains({ origins: [GPTZERO_API_ORIGIN] });
     permissionStatus = Object.fromEntries(PROVIDERS.map((provider, index) => [provider, granted[index]])) as KeyStatus;
-    if ((settings.detector === 'jev' && previous[settings.provider] && !permissionStatus[settings.provider]) || (settings.detector === 'gptzero' && previousGptzero && !gptzeroPermission)) { cancelRequests(); stats.lastError = ''; }
-    if (connectionCheck && !permissionStatus[connectionCheck.provider]) cancelConnectionCheck();
-    if (previousGptzero !== gptzeroPermission || PROVIDERS.some(provider => previous[provider] !== permissionStatus[provider])) broadcast();
+    if ((settings.detector === 'jev' && previous[settings.provider] && !permissionStatus[settings.provider]) || (settings.detector === 'gptzero' && (settings.gptzeroSource === 'personal' ? previousDirect && !gptzeroDirectPermission : previousGptzero && !gptzeroPermission))) { cancelRequests(); stats.lastError = ''; }
+    if (connectionCheck && !keyPermission(connectionCheck.provider)) cancelConnectionCheck();
+    if (previousDirect !== gptzeroDirectPermission || previousGptzero !== gptzeroPermission || PROVIDERS.some(provider => previous[provider] !== permissionStatus[provider])) broadcast();
   });
   permissionTask = task.catch(() => {});
   return task;
@@ -33,7 +44,7 @@ function mutate<T>(action: () => Promise<T>): Promise<T> {
   mutationQueue = next.catch(() => {});
   return next;
 }
-function activeKey() { return keys[settings.provider] ?? ''; }
+function activeKey() { return keys[activeKeyProvider()] ?? ''; }
 function keyStatus() { return Object.fromEntries(PROVIDERS.map(provider => [provider, Boolean(keys[provider])])); }
 let stats: Stats = { ...EMPTY_STATS };
 const cache = new Map<string, Verdict>();
@@ -80,8 +91,8 @@ const ready = (async () => {
   settings = normalizeSettings(local.settings);
   if (!(local.settings as Partial<Settings> | undefined)?.detector && (local.settings || local.keys || local.apiKey)) settings.detector = 'jev';
   await loadGptzero();
-  const savedKeys = local.keys as Partial<Record<Provider, unknown>> | undefined;
-  for (const provider of PROVIDERS) if (typeof savedKeys?.[provider] === 'string') keys[provider] = savedKeys[provider] as string;
+  const savedKeys = local.keys as Partial<Record<KeyProvider, unknown>> | undefined;
+  for (const provider of KEY_PROVIDERS) if (typeof savedKeys?.[provider] === 'string') keys[provider] = savedKeys[provider] as string;
   if (!keys.gateway && typeof local.apiKey === 'string') keys.gateway = local.apiKey;
   // Migrate existing installations without asking for their key again.
   await chrome.storage.local.set({ keys, settings });
@@ -98,14 +109,18 @@ const ready = (async () => {
   if (Array.isArray(session.cache)) for (const item of session.cache.slice(-MAX_CACHE)) {
     if (!Array.isArray(item) || item.length !== 2) continue;
     const [key, v] = item;
-    if (typeof key === 'string' && /^[a-f0-9]{64}$/.test(key) && v && typeof v.probability === 'number' && Number.isFinite(v.probability) && v.probability >= 0 && v.probability <= 1 && typeof v.evaluatedAt === 'number' && v.evaluatedAt <= Date.now() && Date.now() - v.evaluatedAt < CACHE_TTL) cache.set(key, v);
+    if (typeof key === 'string' && /^[a-f0-9]{64}$/.test(key) && v && typeof v.probability === 'number' && Number.isFinite(v.probability) && v.probability >= 0 && v.probability <= 1 && typeof v.evaluatedAt === 'number' && v.evaluatedAt <= Date.now() && Date.now() - v.evaluatedAt < CACHE_TTL) {
+      try { cache.set(key, v.gptzero === undefined ? v : normalizeGptzeroVerdict(v)); }
+      catch { /* Ignore corrupt cached GPTZero data rather than applying its old score. */ }
+    }
   }
 })();
 
 function publicSettings(): PublicSettings {
   const zero = gptzeroStatus(gptzeroPermission);
-  return { ...settings, configured: settings.detector === 'gptzero' ? zero.connected && zero.permissionGranted : Boolean(activeKey()) && permissionStatus[settings.provider],
-    permissionRequired: settings.detector === 'gptzero' ? zero.available && !zero.permissionGranted : Boolean(activeKey()) && !permissionStatus[settings.provider], cacheEpoch };
+  const free = settings.detector === 'gptzero' && settings.gptzeroSource === 'free';
+  return { ...settings, configured: free ? zero.connected && zero.permissionGranted : Boolean(activeKey()) && keyPermission(activeKeyProvider()),
+    permissionRequired: free ? zero.available && !zero.permissionGranted : Boolean(activeKey()) && !keyPermission(activeKeyProvider()), cacheEpoch };
 }
 function persist() {
   if (persistTimer) return;
@@ -162,7 +177,7 @@ async function classify(post: Post): Promise<Classification> {
   const task = (async (): Promise<Classification> => {
     try {
       const result: Classification = await abortable(async () => snapshot.detector === 'gptzero'
-        ? evaluateGptzero(post.text, controller.signal)
+        ? snapshot.gptzeroSource === 'personal' ? evaluateGptzeroDirect(credential, post.text, controller.signal) : evaluateGptzero(post.text, controller.signal)
         : { status: 'ok', verdict: await evaluatePost(credential, post, controller.signal, undefined, snapshot), cached: false }, controller.signal);
       if (requestGeneration !== generation) return { status: settings.enabled ? 'busy' : 'paused', retryAfter: 1000 } as Classification;
       if (result.status !== 'ok') {
@@ -180,7 +195,7 @@ async function classify(post: Post): Promise<Classification> {
       return { status: 'ok', verdict, cached: result.cached };
     } catch (error) {
       if (requestGeneration !== generation) return settings.enabled ? { status: 'busy', retryAfter: 1000 } : { status: 'paused' };
-      const result: Extract<Classification, { status: 'error' }> = snapshot.detector === 'gptzero' ? { status: 'error', code: controller.signal.aborted ? 'timeout' : 'network', message: 'GPTZero could not be reached. Try later or switch to Jev.', retryAfter: 60000 } : safeError(controller.signal.aborted ? controller.signal.reason : error, snapshot.provider);
+      const result: Extract<Classification, { status: 'error' }> = snapshot.detector === 'gptzero' ? { status: 'error', code: controller.signal.aborted ? 'timeout' : 'network', message: 'Cannot reach GPTZero.', retryAfter: 60000 } : safeError(controller.signal.aborted ? controller.signal.reason : error, snapshot.provider);
       stats.errors++;
       stats.lastError = result.message;
       blocked = result;
@@ -202,6 +217,12 @@ function isPopup(sender: chrome.runtime.MessageSender) {
   return sender.url === chrome.runtime.getURL('popup.html');
 }
 
+function gptzeroKeyError(error: unknown): string {
+  const message = error instanceof Error ? error.message : '';
+  // Never expose an upstream body, URL or credential in a popup error.
+  return ['Check your GPTZero API key.', 'Your GPTZero credits have run out.', 'GPTZero rate limit reached.', 'Unable to rate this text.', 'Invalid GPTZero response.', 'GPTZero unavailable.'].includes(message) ? message : 'Cannot reach GPTZero.';
+}
+
 async function handle(message: unknown, sender: chrome.runtime.MessageSender): Promise<unknown> {
   await ready;
   if (sender.id !== chrome.runtime.id || !message || typeof message !== 'object') return { error: 'Unsupported request.' };
@@ -209,6 +230,15 @@ async function handle(message: unknown, sender: chrome.runtime.MessageSender): P
   const popup = isPopup(sender);
   const content = sender.frameId === 0 && isSupportedUrl(sender.url);
   if (!popup && !content) return { error: 'Unsupported sender.' };
+  if (m.type === 'openSettings') {
+    try {
+      await chrome.action.openPopup(sender.tab ? { windowId: sender.tab.windowId } : {});
+    } catch {
+      // Chrome 120–126 only supports openPopup for policy-installed extensions.
+      await chrome.runtime.openOptionsPage();
+    }
+    return { ok: true };
+  }
   await refreshProviderAccess();
   if (m.type === 'getSettings') return publicSettings();
   if (m.type === 'classify' && content) {
@@ -220,12 +250,13 @@ async function handle(message: unknown, sender: chrome.runtime.MessageSender): P
     case 'getDashboard': {
       expireConnectionCheck();
       const check = connectionCheck;
-      return { settings: publicSettings(), stats, cacheSize: cache.size, active, keyStatus: keyStatus(), permissionStatus, gptzero: gptzeroStatus(gptzeroPermission), gptzeroConnecting, connectionCheck: check ? { id: check.id, provider: check.provider, startedAt: check.startedAt, phase: check.phase } : null, connectionResult };
+      return { settings: publicSettings(), stats, cacheSize: cache.size, active, keyStatus: keyStatus(), permissionStatus, gptzero: zeroStatus(), gptzeroConnecting, connectionCheck: check ? { id: check.id, provider: check.provider, startedAt: check.startedAt, phase: check.phase } : null, connectionResult };
     }
     case 'saveSettings': return mutate(async () => {
       const input = m.settings as Partial<Settings> | undefined;
-      if (input?.prompt !== undefined && (typeof input.prompt !== 'string' || !input.prompt.trim() || input.prompt.length > MAX_PROMPT)) return { error: `Write a prompt between 1 and ${MAX_PROMPT} characters.` };
+      if (input?.prompt !== undefined && (typeof input.prompt !== 'string' || !input.prompt.trim() || input.prompt.length > MAX_PROMPT)) return { error: `Prompt must be 1–${MAX_PROMPT} characters.` };
       const next = normalizeSettings({ ...settings, ...input });
+      if (connectionCheck?.provider === 'gptzero' && (next.detector !== settings.detector || next.gptzeroSource !== settings.gptzeroSource)) cancelConnectionCheck();
       await chrome.storage.local.set({ settings: next });
       if (next.enabled !== settings.enabled || detectionChanged(settings, next)) cancelRequests();
       if (detectionChanged(settings, next)) stats.lastError = '';
@@ -234,8 +265,8 @@ async function handle(message: unknown, sender: chrome.runtime.MessageSender): P
       return { ok: true, settings: publicSettings() };
     });
     case 'connectGptzero': {
-      if (!GPTZERO_PROXY_ORIGIN || !gptzeroPermission) return { error: 'Allow access to the GPTZero proxy first.' };
-      if (gptzeroConnecting) return { error: 'GPTZero setup is already in progress.' };
+      if (!GPTZERO_PROXY_ORIGIN || !gptzeroPermission) return { error: 'GPTZero access required.' };
+      if (gptzeroConnecting) return { error: 'GPTZero is connecting.' };
       gptzeroConnecting = true;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
@@ -243,33 +274,38 @@ async function handle(message: unknown, sender: chrome.runtime.MessageSender): P
         await abortable(() => connectGptzero(controller.signal), controller.signal);
         await refreshProviderAccess();
         cancelRequests(); stats.lastError = ''; broadcast();
-        return { ok: true, gptzero: gptzeroStatus(gptzeroPermission), settings: publicSettings() };
-      } catch { return { error: 'Free GPTZero scanning is unavailable. Check the proxy setup or use Jev with your own key.' }; }
+        return { ok: true, gptzero: zeroStatus(), settings: publicSettings() };
+      } catch { return { error: 'GPTZero unavailable.' }; }
       finally { clearTimeout(timeout); gptzeroConnecting = false; }
     }
     case 'refreshGptzeroUsage': {
-      if (settings.detector === 'gptzero' && publicSettings().configured) {
+      if (settings.detector === 'gptzero' && settings.gptzeroSource === 'free' && publicSettings().configured) {
         const signal = AbortSignal.timeout(10000);
         try { await abortable(() => refreshGptzeroUsage(signal), signal); } catch { /* Keep the last known allowance. */ }
       }
-      return { gptzero: gptzeroStatus(gptzeroPermission) };
+      return { gptzero: zeroStatus() };
     }
     case 'connect': {
       expireConnectionCheck();
-      if (connectionCheck) return { ok: false, code: 'busy', message: 'A key check is in progress. Cancel it to try again.' };
+      if (connectionCheck) return { ok: false, code: 'busy', message: 'Key check in progress.' };
       const provider = m.provider ?? settings.provider;
-      if (!isProvider(provider)) return { ok: false, message: 'Choose a supported provider.' };
-      if (!permissionStatus[provider]) return { ok: false, code: 'permission', message: `Allow access to ${PROVIDER_NAMES[provider]} in the extension popup, then try again.` };
-      if (typeof m.apiKey !== 'string' || m.apiKey.trim().length < 10 || m.apiKey.length > 1000 || /\s/.test(m.apiKey.trim())) return { ok: false, message: 'Paste a valid API key for the selected provider.' };
+      if (provider !== 'gptzero' && !isProvider(provider)) return { ok: false, message: 'Choose a supported provider.' };
+      if (!keyPermission(provider)) return { ok: false, code: 'permission', message: `${KEY_NAMES[provider]} access required.` };
+      if (typeof m.apiKey !== 'string' || m.apiKey.trim().length < 10 || m.apiKey.length > 1000 || /\s/.test(m.apiKey.trim())) return { ok: false, message: 'Invalid API key.' };
       const candidate = m.apiKey.trim();
-      const check = { id: ++nextCheckId, provider, startedAt: Date.now(), phase: 'checking' as const, controller: new AbortController() };
+      const check: ConnectionCheckStatus & { controller: AbortController } = { id: ++nextCheckId, provider, startedAt: Date.now(), phase: 'checking', controller: new AbortController() };
       connectionCheck = check;
       const timeout = setTimeout(() => {
         if (connectionCheck === check) cancelConnectionCheck(new DOMException('Key check timed out.', 'TimeoutError'));
       }, CONNECTION_TIMEOUT);
       try {
-        const snapshot = { ...settings, provider };
-        const result = await abortable(() => evaluatePost(candidate, { id: '0', text: 'The library closes at 6 pm today; its opening hours are posted on the front door.', hasMedia: false, truncated: false }, check.controller.signal, undefined, snapshot), check.controller.signal);
+        const sample = { id: '0', text: 'The library closes at 6 pm today; its opening hours are posted on the front door.', hasMedia: false, truncated: false };
+        const result = await abortable(async () => {
+          if (provider !== 'gptzero') return evaluatePost(candidate, sample, check.controller.signal, undefined, { ...settings, provider });
+          const rated = await evaluateGptzeroDirect(candidate, sample.text, check.controller.signal);
+          if (rated.status !== 'ok') throw new Error('message' in rated ? rated.message : 'GPTZero unavailable.');
+          return rated.verdict;
+        }, check.controller.signal);
         return await mutate(async () => {
           await refreshProviderAccess();
           check.controller.signal.throwIfAborted();
@@ -279,15 +315,15 @@ async function handle(message: unknown, sender: chrome.runtime.MessageSender): P
           const nextKeys = { ...keys, [provider]: candidate };
           await chrome.storage.local.set({ keys: nextKeys });
           keys = nextKeys;
-          if (provider === settings.provider) { cancelRequests(); stats.lastError = ''; }
+          if (provider === activeKeyProvider()) { cancelRequests(); stats.lastError = ''; }
           persist();
           broadcast();
-          connectionResult = { id: check.id, provider, ok: true, message: 'Connected. Posts, comments and replies are checked as you scroll.' };
+          connectionResult = { id: check.id, provider, ok: true, message: 'Connected.' };
           return { ok: true, latencyMs: result.latencyMs, settings: publicSettings(), keyStatus: keyStatus() };
         });
       } catch (error) {
         const reason = check.controller.signal.aborted ? check.controller.signal.reason : error;
-        const message = reason?.name === 'TimeoutError' ? 'The key check timed out after 20 seconds. Try again.' : reason?.name === 'AbortError' ? 'Key check cancelled. You can try again.' : safeError(reason, provider).message;
+        const message = reason?.name === 'TimeoutError' ? 'Key check timed out after 20 seconds.' : reason?.name === 'AbortError' ? 'Key check cancelled.' : provider === 'gptzero' ? gptzeroKeyError(reason) : safeError(reason, provider).message;
         if (check.id === nextCheckId) connectionResult = { id: check.id, provider, ok: false, message };
         return { ok: false, message };
       } finally {
@@ -296,20 +332,20 @@ async function handle(message: unknown, sender: chrome.runtime.MessageSender): P
       }
     }
     case 'cancelConnection':
-      if (connectionCheck?.phase === 'saving') return { error: 'Your key has been verified and is being saved.' };
+      if (connectionCheck?.phase === 'saving') return { error: 'Saving key…' };
       cancelConnectionCheck();
       return { ok: true };
     case 'disconnect': return mutate(async () => {
       const provider = m.provider ?? settings.provider;
-      if (!isProvider(provider)) return { error: 'Choose a supported provider.' };
+      if (provider !== 'gptzero' && !isProvider(provider)) return { error: 'Choose a supported provider.' };
       // Cancel validation before removing a key so a late response cannot restore it.
       if (connectionCheck?.provider === provider) cancelConnectionCheck();
       const nextKeys = { ...keys };
       delete nextKeys[provider];
       await chrome.storage.local.set({ keys: nextKeys });
       keys = nextKeys;
-      if (provider === settings.provider) cancelRequests();
-      await chrome.permissions.remove({ origins: [PROVIDER_ORIGINS[provider]] });
+      if (provider === activeKeyProvider()) { cancelRequests(); stats.lastError = ''; persist(); }
+      await chrome.permissions.remove({ origins: [KEY_ORIGINS[provider]] });
       await refreshProviderAccess();
       broadcast();
       return { ok: true, settings: publicSettings(), keyStatus: keyStatus() };
@@ -328,7 +364,7 @@ async function handle(message: unknown, sender: chrome.runtime.MessageSender): P
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  void handle(message, sender).then(sendResponse).catch(() => sendResponse({ error: 'The extension could not complete the request. Reload it and try again.' }));
+  void handle(message, sender).then(sendResponse).catch(() => sendResponse({ error: 'Request failed. Reload the extension.' }));
   return true;
 });
 // Permissions can also change in Chrome's extension settings while tabs are open.

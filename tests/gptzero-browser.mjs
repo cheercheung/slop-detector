@@ -28,7 +28,7 @@ try {
       const body = await request.json(); assert.deepEqual(Object.keys(body), ['document']); calls.push(body.document);
       if (body.document.includes('Too short')) return Response.json({ error: 'input rejected' }, { status: 422 });
       const ai = body.document.includes('99%');
-      return Response.json({ documents: [{ predicted_class: ai ? 'ai' : 'human', class_probabilities: { human: ai ? 0.03 : 0.9, ai: ai ? 0.9 : 0.05, mixed: ai ? 0.07 : 0.05 }, confidence_category: 'high' }] });
+      return Response.json({ documents: [{ predicted_class: ai ? 'ai' : 'mixed', class_probabilities: { human: ai ? 0.03 : 0, ai: ai ? 0.9 : 0, mixed: ai ? 0.07 : 1 }, confidence_category: 'high' }] });
     },
   };
   mf = new Miniflare({ ...convertV4MiniflareOptions(options), resourcePersistencePath: `${temp}/state`, isolatedResourcePersistencePath: `${temp}/state` });
@@ -50,7 +50,7 @@ try {
   const id = new URL(worker.url()).host;
   options.bindings.ALLOWED_EXTENSION_IDS = id;
   await mf.setOptions({ ...convertV4MiniflareOptions(options), resourcePersistencePath: `${temp}/state`, isolatedResourcePersistencePath: `${temp}/state` });
-  await mockPermissionPrompts(context, worker, id, [...providerOrigins, `${proxyUrl}/*`]);
+  await mockPermissionPrompts(context, worker, id, [...providerOrigins, 'https://api.gptzero.me/*', `${proxyUrl}/*`]);
   const popup = await context.newPage(); popup.on('pageerror', e => errors.push(e.message));
   await popup.goto(`chrome-extension://${id}/popup.html`);
   await popup.waitForFunction(() => document.querySelector('#detector-gptzero').getAttribute('aria-pressed') === 'true');
@@ -58,12 +58,17 @@ try {
   assert.equal(await popup.locator('#prompt-section').isVisible(), false);
   await popup.setViewportSize({ width: 360, height: 620 });
   await popup.locator('body').screenshot({ path: 'test-results/popup-gptzero-setup.png' });
+  assert.equal(await popup.locator('#connect-gptzero, #gptzero-privacy').count(), 0);
+  await popup.locator('#detector-jev').click();
   await worker.evaluate(() => { globalThis.__denyNextPermission = true; });
-  await popup.locator('#connect-gptzero').click();
+  await popup.locator('#detector-gptzero').click();
   await popup.waitForFunction(() => document.querySelector('#message').textContent.includes('not granted'));
   assert.equal(incoming.length, 0, 'Denied access must send no proxy request');
-  await popup.locator('#connect-gptzero').click();
-  await popup.waitForFunction(() => document.querySelector('#connect-gptzero').hidden);
+  assert.equal(await popup.locator('#detector-jev').getAttribute('aria-pressed'), 'true');
+  await popup.locator('#enabled').click();
+  await popup.locator('#detector-gptzero').click();
+  await popup.waitForFunction(() => document.querySelector('#detector-gptzero').getAttribute('aria-pressed') === 'true' && !document.querySelector('#detector-gptzero').disabled && !document.querySelector('#gptzero-usage').hidden);
+  assert.equal(await popup.locator('#enabled').getAttribute('aria-checked'), 'true');
   assert.equal(calls.length, 0, 'Enabling must not spend a GPTZero check');
   assert.equal(await popup.locator('#gptzero-usage').innerText(), '3 / 3 free checks left');
   assert.ok(incoming.some(r => r.path === '/v1/usage' && r.origin === `chrome-extension://${id}`), 'Actual browser fetch must send the extension Origin');
@@ -78,9 +83,16 @@ try {
     console.log('Diagnostic:', { calls, incoming, labels: await feed.locator('jev-slop-label .badge').allTextContents(), dashboard: await popup.evaluate(() => chrome.runtime.sendMessage({ type: 'getDashboard' })) });
     throw error;
   });
-  assert.match(await badge(1).innerText(), /Not slop.*90%/s);
-  assert.match(await badge(2).innerText(), /Slop.*97%/s);
-  assert.match(await badge(1).getAttribute('title'), /GPTZero: Human/);
+  assert.match(await badge(1).innerText(), /Not slop.*100%/s);
+  assert.match(await badge(2).innerText(), /Slop.*90%/s);
+  assert.equal(await feed.locator('#p1').getAttribute('data-jev-collapsed'), null, 'Mixed must not be hidden');
+  await popup.locator('#theme').selectOption('fade');
+  await feed.waitForFunction(() => document.querySelector('#p2').hasAttribute('data-jev-dim'));
+  assert.equal(await feed.locator('#p1').getAttribute('data-jev-dim'), null, 'Mixed must not fade');
+  await popup.locator('#theme').selectOption('stamp');
+  await feed.locator('#p2 jev-slop-stamp').waitFor();
+  assert.equal(await feed.locator('#p1 jev-slop-stamp').count(), 0, '100% Mixed/AI-polished must not be stamped');
+  assert.equal(await badge(1).getAttribute('title'), 'Open Slop Detector settings');
   assert.equal(calls.length, 2); assert.ok(!calls.some(text => text.includes('Too short')));
   const saved = await worker.evaluate(() => chrome.storage.local.get(null));
   assert.equal(JSON.stringify(saved).includes('server-only-e2e-key'), false);
@@ -92,7 +104,10 @@ try {
 
   await popup.locator('#clear-cache').click(); await feed.bringToFront();
   await feed.waitForFunction(() => document.querySelector('#p2 jev-slop-label')?.shadowRoot.querySelector('.badge').textContent.includes('Slop'));
+  await feed.waitForFunction(() => document.querySelector('#p1 jev-slop-label')?.shadowRoot.querySelector('.badge').textContent.includes('Not slop'));
   assert.equal(calls.length, 2, `Proxy cache survives extension cache clearing: ${JSON.stringify(calls)}`);
+  assert.match(await badge(1).innerText(), /Not slop.*100%/s, 'Legacy AI+Mixed proxy cache must be reinterpreted');
+  assert.equal(await feed.locator('#p1 jev-slop-stamp').count(), 0);
   await feed.evaluate(() => scrollTo(0, 1400));
   await feed.waitForFunction(() => document.querySelector('#p3 jev-slop-label')?.shadowRoot.querySelector('.badge').textContent === 'Unrated');
   const count = calls.length;
@@ -122,7 +137,7 @@ try {
   await feed.bringToFront();
   await feed.waitForFunction(() => document.querySelector('#p4 jev-slop-label')?.shadowRoot.querySelector('.badge').textContent.includes('Not slop'));
   assert.equal(await popup.locator('#attribution').innerText(), 'Powered by Jev');
-  assert.match(await badge(4).getAttribute('title'), /Is this a sales pitch/);
+  assert.equal(await badge(4).getAttribute('title'), 'Open Slop Detector settings');
   assert.ok((await worker.evaluate(() => globalThis.__jevRequests)).some(r => r.questions.aiGenerated.instructions === 'Is this a sales pitch?'));
   await popup.locator('#detector-gptzero').click(); await feed.bringToFront();
   await feed.waitForFunction(() => document.querySelector('#p4 jev-slop-label')?.shadowRoot.querySelector('.badge').textContent === 'Free limit reached');
@@ -130,6 +145,68 @@ try {
   assert.equal(await popup.locator('#prompt').inputValue(), 'Is this a sales pitch?');
   assert.equal(calls.length, 3);
   console.log('PASS: explicit Jev switch works after GPTZero quota, retains custom prompt/key and keeps caches isolated');
+
+  await worker.evaluate(() => {
+    const original = globalThis.fetch;
+    globalThis.__directCalls = [];
+    globalThis.__directStatus = 200;
+    globalThis.fetch = async (url, init) => {
+      if (String(url) !== 'https://api.gptzero.me/v2/predict/text') return original(url, init);
+      const headers = new Headers(init.headers);
+      globalThis.__directCalls.push({ body: JSON.parse(init.body), headers: Object.fromEntries(headers), credentials: init.credentials, redirect: init.redirect });
+      const status = headers.get('x-api-key') === 'bad-personal-key' ? 401 : globalThis.__directStatus;
+      if (status !== 200) return new Response('Do not display this upstream error', { status, headers: { 'Retry-After': '120' } });
+      return Response.json({ documents: [{ document_classification: 'MIXED', class_probabilities: { human: 0, mixed: 0.98, ai: 0.02 } }] });
+    };
+  });
+  await popup.locator('#detector-gptzero').click();
+  await popup.locator('#gptzero-source').selectOption('personal');
+  await popup.locator('#gptzero-key').fill('user-personal-gptzero-key');
+  await worker.evaluate(() => { globalThis.__denyNextPermission = true; });
+  await popup.locator('#gptzero-connect').click();
+  await popup.waitForFunction(() => document.querySelector('#message').textContent.includes('not granted'));
+  assert.equal(await worker.evaluate(() => globalThis.__directCalls.length), 0);
+  const proxyCount = incoming.length;
+  await popup.locator('#gptzero-connect').click();
+  await popup.waitForFunction(() => document.querySelector('#gptzero-key-status').textContent === 'Connected');
+  await feed.bringToFront();
+  await feed.waitForFunction(() => document.querySelector('#p4 jev-slop-label')?.shadowRoot.querySelector('.badge').textContent.includes('98%'));
+  assert.equal(await feed.locator('#p4 jev-slop-stamp').count(), 0, 'Personal GPTZero mixed scores must not be stamped');
+  assert.equal(incoming.length, proxyCount, 'Personal key validation and scoring must bypass the proxy');
+  const directCalls = await worker.evaluate(() => globalThis.__directCalls);
+  assert.equal(directCalls.length, 2, 'One connection check and one formerly quota-blocked visible item');
+  for (const call of directCalls) {
+    assert.deepEqual(Object.keys(call.body), ['document']);
+    assert.deepEqual(Object.keys(call.headers).sort(), ['accept', 'content-type', 'x-api-key']);
+    assert.equal(call.headers['x-api-key'], 'user-personal-gptzero-key');
+    assert.equal(call.credentials, 'omit'); assert.equal(call.redirect, 'error');
+  }
+  await popup.reload();
+  await popup.waitForFunction(() => document.querySelector('#gptzero-key-status').textContent === 'Connected');
+  assert.equal(await popup.locator('#gptzero-source').inputValue(), 'personal');
+  assert.equal(await popup.locator('#gptzero-plan').innerText(), 'Your key');
+  assert.equal(await popup.locator('#gptzero-usage').isVisible(), false);
+  assert.equal(await popup.locator('#gptzero-key').inputValue(), '');
+  await popup.locator('#gptzero-connection summary').click();
+  await popup.locator('#gptzero-key').fill('bad-personal-key');
+  await popup.locator('#gptzero-connect').click();
+  await popup.waitForFunction(() => document.querySelector('#message').textContent === 'Check your GPTZero API key.');
+  assert.equal((await worker.evaluate(() => chrome.storage.local.get('keys'))).keys.gptzero, 'user-personal-gptzero-key');
+  assert.equal(incoming.length, proxyCount, 'Reopening the popup in personal mode must not contact the proxy');
+  await popup.locator('body').screenshot({ path: 'test-results/popup-gptzero-personal.png' });
+
+  await worker.evaluate(() => { globalThis.__directStatus = 429; });
+  await feed.evaluate(() => { document.querySelector('#p4 [data-testid="tweetText"]').textContent = 'A new visible item to test the direct rate limit.'; });
+  await feed.waitForFunction(() => document.querySelector('#p4 jev-slop-label')?.shadowRoot.querySelector('.badge').textContent.includes('Couldn’t rate'));
+  const rateLimitedCount = await worker.evaluate(() => globalThis.__directCalls.length);
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  assert.equal(await worker.evaluate(() => globalThis.__directCalls.length), rateLimitedCount, 'Retry-After must stop immediate retries');
+  await popup.locator('#gptzero-source').selectOption('free');
+  await feed.bringToFront();
+  await feed.waitForFunction(() => document.querySelector('#p4 jev-slop-label')?.shadowRoot.querySelector('.badge').textContent === 'Free limit reached');
+  assert.equal(await worker.evaluate(() => globalThis.__directCalls.length), rateLimitedCount, 'Free mode never silently spends a saved personal key');
+  assert.equal(calls.length, 3, 'Personal scanning never resets the free allowance');
+  console.log('PASS: personal key resumes exhausted free scanning directly, persists safely, handles bad keys/rate limits, and never becomes an automatic paid fallback');
   assert.deepEqual(errors, []);
 } finally {
   await context?.close();

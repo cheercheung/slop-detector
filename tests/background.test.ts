@@ -7,6 +7,9 @@ test('migrates legacy keys, serializes settings and restricts credential access'
   const local: Record<string, unknown> = { apiKey: 'legacy-gateway-test-key', settings: { enabled: false, threshold: 0.8, dimSlop: true } };
   const session: Record<string, unknown> = { cache: [null, ['bad-key', {}], ['f'.repeat(64), { probability: 1.5, evaluatedAt: Date.now() }]] };
   const restrictions: string[] = [];
+  const popupWindows: (number | undefined)[] = [];
+  let popupUnavailable = false;
+  let optionsOpened = 0;
   let listener: (message: unknown, sender: chrome.runtime.MessageSender, respond: (result: any) => void) => boolean;
   const area = (data: Record<string, unknown>, name: string) => ({
     setAccessLevel: async ({ accessLevel }: { accessLevel: string }) => { restrictions.push(`${name}:${accessLevel}`); },
@@ -15,13 +18,14 @@ test('migrates legacy keys, serializes settings and restricts credential access'
     remove: async (key: string) => { delete data[key]; },
   });
   globalThis.chrome = {
+    action: { openPopup: async ({ windowId }: { windowId?: number }) => { popupWindows.push(windowId); if (popupUnavailable) throw new Error('Popup unavailable'); } },
     permissions: mockPermissions(Object.values(PROVIDER_ORIGINS)),
     storage: { local: area(local, 'local'), session: area(session, 'session') },
     tabs: { query: async () => [], sendMessage: async () => {} },
-    runtime: { id: 'test', getURL: (path: string) => `chrome-extension://test/${path}`, onMessage: { addListener: (fn: typeof listener) => { listener = fn; } } },
+    runtime: { id: 'test', getURL: (path: string) => `chrome-extension://test/${path}`, openOptionsPage: async () => { optionsOpened++; }, onMessage: { addListener: (fn: typeof listener) => { listener = fn; } } },
   } as unknown as typeof chrome;
   await import('../src/background.ts');
-  const send = (message: unknown, content = false) => new Promise<any>(resolve => listener(message, { id: 'test', url: content ? 'https://x.com/home' : 'chrome-extension://test/popup.html', frameId: 0 }, resolve));
+  const send = (message: unknown, content = false) => new Promise<any>(resolve => listener(message, { id: 'test', url: content ? 'https://x.com/home' : 'chrome-extension://test/popup.html', frameId: 0, ...(content ? { tab: { id: 1, windowId: 42 } as chrome.tabs.Tab } : {}) }, resolve));
   const initial = await send({ type: 'getDashboard' });
   assert.deepEqual(restrictions, ['local:TRUSTED_CONTEXTS', 'session:TRUSTED_CONTEXTS']);
   assert.deepEqual(local.keys, { gateway: 'legacy-gateway-test-key' });
@@ -40,6 +44,15 @@ test('migrates legacy keys, serializes settings and restricts credential access'
   assert.equal(saved.prompt, 'Is this an advertisement?');
   assert.equal(saved.keys, undefined);
   assert.equal(saved.apiKey, undefined);
+  assert.deepEqual(await send({ type: 'openSettings' }, true), { ok: true });
+  assert.deepEqual(popupWindows, [42]);
+  assert.equal(optionsOpened, 0);
+  popupUnavailable = true;
+  assert.deepEqual(await send({ type: 'openSettings' }, true), { ok: true });
+  assert.equal(optionsOpened, 1);
+  const denied = await new Promise<any>(resolve => listener({ type: 'openSettings' }, { id: 'test', url: 'https://example.com/', frameId: 0 }, resolve));
+  assert.ok(denied.error);
+  assert.equal(popupWindows.length, 2);
   assert.ok((await send({ type: 'saveSettings', settings: { provider: 'jev' } }, true)).error);
   assert.ok((await send({ type: 'getDashboard' }, true)).error);
   assert.ok((await send({ type: 'disconnect' }, true)).error);

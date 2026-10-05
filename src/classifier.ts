@@ -56,11 +56,11 @@ export function safeError(error: unknown, provider: Provider = 'gateway'): Extra
   const e = error as { statusCode?: number; name?: string; message?: string };
   const status = e?.statusCode;
   const name = PROVIDER_NAMES[provider];
-  if (status === 401 || status === 403) return { status: 'error', code: 'auth', message: `Check your ${name} key in the extension.` };
-  if (status === 402) return { status: 'error', code: 'credits', message: `Your ${name} account needs credits.` };
-  if (status === 429) return { status: 'error', code: 'rate_limit', message: `${name} rate limit. Retrying shortly.`, retryAfter: 60_000 };
-  if (e?.name === 'TimeoutError' || e?.name === 'AbortError') return { status: 'error', code: 'timeout', message: 'The request timed out. Retrying shortly.', retryAfter: 15_000 };
-  if (e?.message === 'INVALID_MODEL_RESPONSE' || e?.name?.includes('Validation') || e?.name?.includes('Parse')) return { status: 'error', code: 'invalid_response', message: 'Jev returned an invalid result. Try again later.', retryAfter: 60_000 };
-  if (e?.name === 'TypeError' || e?.message?.includes('fetch')) return { status: 'error', code: 'network', message: `Cannot reach ${name}. Check your connection.`, retryAfter: 15_000 };
-  return { status: 'error', code: 'provider', message: `Jev is unavailable through ${name}. Try again later.`, retryAfter: 30_000 };
+  if (status === 401 || status === 403) return { status: 'error', code: 'auth', message: `Check your ${name} key.` };
+  if (status === 402) return { status: 'error', code: 'credits', message: `${name} credits exhausted.` };
+  if (status === 429) return { status: 'error', code: 'rate_limit', message: `${name} rate limit reached.`, retryAfter: 60_000 };
+  if (e?.name === 'TimeoutError' || e?.name === 'AbortError') return { status: 'error', code: 'timeout', message: 'Request timed out.', retryAfter: 15_000 };
+  if (e?.message === 'INVALID_MODEL_RESPONSE' || e?.name?.includes('Validation') || e?.name?.includes('Parse')) return { status: 'error', code: 'invalid_response', message: 'Invalid Jev result.', retryAfter: 60_000 };
+  if (e?.name === 'TypeError' || e?.message?.includes('fetch')) return { status: 'error', code: 'network', message: `Cannot reach ${name}.`, retryAfter: 15_000 };
+  return { status: 'error', code: 'provider', message: `${name} unavailable.`, retryAfter: 30_000 };
 }

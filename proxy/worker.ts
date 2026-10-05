@@ -106,7 +106,14 @@ export default {
           method: 'POST', headers: { 'x-api-key': env.GPTZERO_API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({ document: body.text }), signal, redirect: 'manual',
         });
-        if (response.ok) result = { status: 'ok', verdict: parseGptzeroResponse(await response.json(), started), cached: false };
+        if (response.ok) {
+          const verdict = parseGptzeroResponse(await response.json(), started);
+          // Keep the v1 wire format compatible with already-installed clients
+          // and cached responses. Updated extensions derive AI-only scores from
+          // the three-class breakdown, for both fresh and cached responses.
+          verdict.probability = Math.min(1, verdict.gptzero!.probabilities.ai + verdict.gptzero!.probabilities.mixed);
+          result = { status: 'ok', verdict, cached: false };
+        }
         else {
           await response.body?.cancel();
           if ([400, 422].includes(response.status)) result = { status: 'unrated', message: 'GPTZero could not evaluate this text. It may be too short or unsupported.' };

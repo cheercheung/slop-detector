@@ -1,9 +1,9 @@
 import { fontReady } from './font';
 import { dimContent, extractPost, findPosts, labelAnchor, labelAlignmentAnchor, ownsNode } from './extract';
-import { DEFAULT_SETTINGS, PROVIDER_NAMES, detectionChanged, hasReadableText, postContentKey, verdictLabel, type Post, type PublicSettings, type Classification, type Verdict } from './shared';
+import { DEFAULT_SETTINGS, detectionChanged, hasReadableText, isSlopVerdict, postContentKey, type Post, type PublicSettings, type Classification, type Verdict } from './shared';
 import { createStamp, type SlopStamp } from './stamp';
 
-type Entry = { article: HTMLElement; host: HTMLElement; button: HTMLButtonElement; details: HTMLElement; post: Post; fingerprint: string; visible: boolean; visibleSince: number; visibilityTarget?: HTMLElement; radarAnchor?: HTMLElement; state: 'idle' | 'pending' | 'done' | 'error' | 'unrated'; attempts: number; nextTry: number; verdict?: Verdict; stamp?: SlopStamp; error?: string; quota?: boolean; token: number; concealed: HTMLElement[]; revealed: boolean; reveal: HTMLButtonElement };
+type Entry = { article: HTMLElement; host: HTMLElement; button: HTMLButtonElement; post: Post; fingerprint: string; visible: boolean; visibleSince: number; visibilityTarget?: HTMLElement; radarAnchor?: HTMLElement; state: 'idle' | 'pending' | 'done' | 'error' | 'unrated'; attempts: number; nextTry: number; verdict?: Verdict; stamp?: SlopStamp; error?: string; quota?: boolean; token: number; concealed: HTMLElement[]; revealed: boolean; reveal: HTMLButtonElement };
 const entries = new Map<HTMLElement, Entry>();
 const visibilityTargets = new Map<Element, Entry>();
 const radarAnchors = new Map<HTMLElement, number>();
@@ -27,9 +27,14 @@ const CSS = `
 :host([data-tone=paused]){margin:2px 0!important;font-size:11px;line-height:1.4}
 :host([data-collapsed]){margin:4px 0!important}
 :host([data-collapsed]) .badge{display:none}
-:host([data-collapsed]) .reveal{display:flex;width:100%;margin:0;justify-content:space-between;text-align:left;text-decoration:none;padding:8px 12px;border-radius:6px;background:light-dark(#f5f5f5,#202020);border-color:light-dark(#e5e5e5,#3d3d3d);font-size:12px;line-height:1.4}
-:host([data-collapsed]) .reveal:hover{background:light-dark(#ebebeb,#2b2b2b)}
-*{box-sizing:border-box;font-family:"Slop Geist",sans-serif}.badge,.reveal{display:inline-flex;align-items:center;gap:7px;border:1px solid light-dark(#d4d4d4,#555);border-radius:3px;padding:5px 8px;background:light-dark(#fff,#181818);color:light-dark(#333,#ddd);font-size:11px;font-weight:400;line-height:1.2;cursor:pointer}.badge:focus-visible,.reveal:focus-visible{outline:2px solid currentColor;outline-offset:3px}.score{opacity:.65;padding-left:7px;border-left:1px solid light-dark(#ddd,#555)}.badge[data-tone=slop]{font-weight:700;border-color:light-dark(#333,#aaa)}.badge[data-tone=pending]{opacity:.6}.reveal{margin-left:6px;text-decoration:underline;text-underline-offset:2px}.reveal[hidden]{display:none}.details{font-size:12px;line-height:1.5;max-width:440px;margin-top:8px;padding:10px 12px;border:1px solid light-dark(#ddd,#555);border-radius:3px;background:light-dark(#fff,#181818);color:light-dark(#333,#ddd);white-space:pre-wrap;overflow-wrap:anywhere}.details[hidden]{display:none}
+:host([data-collapsed]) .reveal{display:flex;width:100%;margin:0;justify-content:space-between;gap:12px;text-align:left;text-decoration:none;padding:9px 12px;border-color:transparent;border-radius:8px;background:light-dark(#f7f7f6,#1c1c1c);font-size:12.5px;line-height:1.4;transition:background .12s}
+:host([data-collapsed]) .reveal:hover{background:light-dark(#f0f0ef,#252525)}
+:host([data-collapsed]) .reveal .what{font-weight:500;color:light-dark(#1a1a1a,#ededed)}
+:host([data-collapsed]) .reveal .sep,:host([data-collapsed]) .reveal .act,:host([data-collapsed]) .reveal .score{color:light-dark(#767676,#999);transition:color .12s}
+:host([data-collapsed]) .reveal:hover .act{color:light-dark(#1a1a1a,#ededed);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+:host([data-collapsed]) .reveal .score{opacity:1;padding:0;border:0;font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){.reveal,.reveal *{transition:none!important}}
+*{box-sizing:border-box;font-family:"Slop Geist",sans-serif}.badge,.reveal{display:inline-flex;align-items:center;gap:7px;border:1px solid light-dark(#d4d4d4,#555);border-radius:3px;padding:5px 8px;background:light-dark(#fff,#181818);color:light-dark(#333,#ddd);font-size:11px;font-weight:400;line-height:1.2;cursor:pointer}.badge:focus-visible,.reveal:focus-visible{outline:2px solid currentColor;outline-offset:3px}.score{opacity:.65;padding-left:7px;border-left:1px solid light-dark(#ddd,#555)}.badge[data-tone=slop]{font-weight:700;border-color:light-dark(#333,#aaa)}.badge[data-tone=pending]{opacity:.6}.reveal{margin-left:6px;text-decoration:underline;text-underline-offset:2px}.reveal[hidden]{display:none}
 .badge[data-tone=clean]{gap:6px;min-height:24px;padding:3px 0;border:0;background:transparent;color:light-dark(#646464,#aaa);font-size:12px;font-weight:500;line-height:1.4}
 .badge[data-tone=clean] .check{width:13px;height:13px;flex:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;fill:none}
 .badge[data-tone=clean] .score{display:inline-flex;align-items:center;gap:6px;opacity:1;padding:0;border:0;color:light-dark(#767676,#999);font-weight:400;font-variant-numeric:tabular-nums}
@@ -57,6 +62,16 @@ document.documentElement.append(dimStyle);
 function clearDim(article: HTMLElement) {
   article.removeAttribute('data-jev-dim');
   article.querySelectorAll('[data-jev-dimmed]').forEach(node => { if (node.closest('[data-jev-target]') === article) node.removeAttribute('data-jev-dimmed'); });
+}
+function applyDim(article: HTMLElement) {
+  const targets = new Set(dimContent(article));
+  if (article.getAttribute('data-jev-dim') !== 'true') article.setAttribute('data-jev-dim', 'true');
+  article.querySelectorAll<HTMLElement>('[data-jev-dimmed]').forEach(node => {
+    if (node.closest('[data-jev-target]') === article && !targets.has(node)) node.removeAttribute('data-jev-dimmed');
+  });
+  for (const node of targets) {
+    if (node.getAttribute('data-jev-dimmed') !== 'true') node.setAttribute('data-jev-dimmed', 'true');
+  }
 }
 function clearConcealed(entry: Entry) {
   entry.article.removeAttribute('data-jev-collapsed');
@@ -87,7 +102,7 @@ function releaseRadarAnchor(entry: Entry) {
   entry.radarAnchor = undefined;
 }
 function positionRadar(entry: Entry) {
-  const floating = entry.host.hasAttribute('data-floating') && entry.host.isConnected;
+  const floating = !entry.host.hidden && entry.host.hasAttribute('data-floating') && entry.host.isConnected;
   let container = floating ? entry.host.parentElement : null;
   // Keep the overlay beside the text, outside any clamped/overflow-hidden text
   // box, and give it a local containing block that moves with the post.
@@ -118,31 +133,31 @@ function positionRadar(entry: Entry) {
   }
 }
 function effects(entry: Entry) {
-  clearDim(entry.article);
+  const slop = settings.enabled && settings.configured && entry.verdict && isSlopVerdict(entry.verdict, settings.threshold);
+  // Layout reads below flush styles. Clearing an existing fade first would
+  // briefly restore full opacity and restart its transition on every scan.
+  if (slop && settings.theme === 'fade') applyDim(entry.article);
+  else clearDim(entry.article);
   clearConcealed(entry);
   alignLabel(entry);
   positionRadar(entry);
-  const slop = settings.enabled && settings.configured && entry.verdict && entry.verdict.probability >= settings.threshold;
   if (!slop || settings.theme !== 'stamp') { entry.stamp?.destroy(); entry.stamp = undefined; }
   const collapsed = !!slop && settings.theme === 'hide' && !entry.revealed;
   entry.host.toggleAttribute('data-collapsed', collapsed);
   entry.reveal.hidden = !slop || settings.theme !== 'hide';
-  entry.reveal.textContent = entry.revealed ? 'Hide post' : 'Slop detected - Show post';
+  entry.reveal.textContent = entry.revealed ? 'Hide post' : '';
+  if (!entry.revealed) {
+    const text = document.createElement('span');
+    for (const [name, value] of [['what', 'Slop detected'], ['sep', ' - '], ['act', 'Show post']]) { const part = document.createElement('span'); part.className = name; part.textContent = value; text.append(part); }
+    entry.reveal.append(text);
+  }
   if (collapsed && settings.showScore) {
     const score = document.createElement('span'); score.className = 'score'; score.textContent = `${Math.round(entry.verdict!.probability * 100)}%`;
     entry.reveal.append(score);
   }
   entry.reveal.setAttribute('aria-expanded', String(entry.revealed));
-  if (collapsed) {
-    entry.details.hidden = true;
-    entry.button.setAttribute('aria-expanded', 'false');
-  }
   if (!slop) return;
   if (settings.theme === 'stamp' && !entry.stamp) entry.stamp = createStamp(entry.article);
-  if (settings.theme === 'fade') {
-    entry.article.setAttribute('data-jev-dim', 'true');
-    dimContent(entry.article).forEach(node => node.setAttribute('data-jev-dimmed', 'true'));
-  }
   if (collapsed) {
     entry.article.setAttribute('data-jev-collapsed', 'true');
     // Collapse this item's own branches, keeping separately rated replies and
@@ -167,8 +182,6 @@ function label(entry: Entry, text: string, tone = 'neutral', detail = '', score?
   if (tone === 'pending') {
     // The same concentric rings, sweep and blip as the extension's radar icon.
     entry.button.innerHTML = `<svg class="radar" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" stroke-width="1.3" opacity=".8"/><circle cx="12" cy="12" r="4.85" stroke-width="1.15" opacity=".55"/><g class="radar-sweep"><path d="M12 12V3a9 9 0 0 1 6.364 2.636Z" fill="currentColor" fill-opacity=".12" stroke="none"/><path d="m12 12 6.364-6.364" stroke-width="1.4"/></g><circle cx="6.7" cy="16.15" r="1.2" fill="currentColor" stroke="none"/></svg>`;
-    entry.details.hidden = true;
-    entry.button.setAttribute('aria-expanded', 'false');
   }
   if (tone === 'clean') {
     const check = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -179,33 +192,30 @@ function label(entry: Entry, text: string, tone = 'neutral', detail = '', score?
   const title = document.createElement('span'); title.className = 'label-text'; title.textContent = text;
   entry.button.append(title);
   if (score !== undefined && settings.showScore) { const s = document.createElement('span'); s.className = 'score'; s.textContent = `${Math.round(score * 100)}%`; entry.button.append(s); }
-  entry.button.setAttribute('aria-label', `${text}${score !== undefined && settings.showScore ? `, ${Math.round(score * 100)} percent confidence` : ''}${tone === 'pending' ? '' : '. Show details.'}`);
-  entry.details.textContent = detail;
+  entry.button.setAttribute('aria-label', `${text}${score !== undefined && settings.showScore ? `, ${Math.round(score * 100)} percent confidence` : ''}${tone === 'pending' ? '' : tone === 'error' ? '. Retry this post.' : '. Open Slop Detector settings.'}`);
   entry.button.title = detail;
-  entry.host.hidden = tone === 'clean' && !settings.showNotSlop;
+  entry.host.hidden = !settings.showNotSlop && (tone === 'clean' || tone === 'pending');
   effects(entry);
 }
 function paint(entry: Entry) {
+  if (!hasReadableText(entry.post)) { entry.host.hidden = true; effects(entry); return; }
   const detectorName = settings.detector === 'gptzero' ? 'GPTZero' : 'Jev';
-  if (!settings.enabled) { label(entry, 'Detector paused', 'paused', 'Resume Slop Detector from its toolbar popup.'); return; }
-  if (!settings.configured && settings.detector === 'gptzero') { label(entry, 'Enable GPTZero', 'paused', 'Open Slop Detector to enable GPTZero or choose Jev with your own key.'); return; }
-  if (!settings.configured) { label(entry, settings.permissionRequired ? 'Allow provider access' : 'Connect Jev', 'neutral', settings.permissionRequired ? `Open Slop Detector and allow access to ${PROVIDER_NAMES[settings.provider]}. Your key is still saved.` : `Open Slop Detector and add your ${PROVIDER_NAMES[settings.provider]} key.`); return; }
-  if (!hasReadableText(entry.post)) { label(entry, 'Unrated · no text', 'neutral', `${detectorName} evaluates readable text. Images, videos and linked pages are not analyzed.`); return; }
+  if (!settings.enabled) { label(entry, 'Detector paused', 'paused', 'Open Slop Detector settings'); return; }
+  if (!settings.configured && settings.detector === 'gptzero') { label(entry, settings.permissionRequired ? 'Allow GPTZero access' : settings.gptzeroSource === 'personal' ? 'Connect GPTZero' : 'Enable GPTZero', 'paused', 'Open Slop Detector settings'); return; }
+  if (!settings.configured) { label(entry, settings.permissionRequired ? 'Allow provider access' : 'Connect Jev', 'neutral', 'Open Slop Detector settings'); return; }
   if (entry.verdict) {
     const v = entry.verdict;
-    const slop = v.probability >= settings.threshold;
-    const text = verdictLabel(v.probability, settings.threshold);
+    const slop = isSlopVerdict(v, settings.threshold);
+    const text = slop ? 'Slop' : 'Not slop';
     const confidence = slop ? v.probability : 1 - v.probability;
-    const description = v.gptzero ? `GPTZero: ${{ ai: 'AI-generated', mixed: 'Mixed human/AI', human: 'Human' }[v.gptzero.classification]}${v.gptzero.confidence ? ` · ${v.gptzero.confidence} model confidence` : ''}.\nSlop score = AI + mixed probability; this is not the percentage of words written by AI.` : `Question: ${settings.prompt}`;
-    const detail = `${settings.showScore ? `${text}: ${Math.round(confidence * 100)}% confidence · slop threshold: ${Math.round(settings.threshold * 100)}%\n` : ''}${description}${entry.post.hasMedia ? '\nMedia itself was not analyzed.' : ''}${entry.post.truncated ? '\nOnly the available excerpt was analyzed.' : ''}${v.gptzero ? '' : `\nJev’s estimate of a “${slop ? 'yes' : 'no'}” to your prompt, based on this item’s text.`}`;
-    label(entry, text, slop ? 'slop' : 'clean', detail, confidence);
+    label(entry, text, slop ? 'slop' : 'clean', 'Open Slop Detector settings', confidence);
 
   } else if (entry.state === 'unrated') {
-    label(entry, 'Unrated', 'neutral', entry.error || 'This text could not be evaluated.');
+    label(entry, 'Unrated', 'neutral', entry.error || 'Unable to rate this text');
   } else if (entry.state === 'error') {
-    label(entry, entry.quota ? 'Free limit reached' : 'Couldn’t rate · retry', entry.quota ? 'paused' : 'error', entry.error || 'Click to retry this post.');
+    label(entry, entry.quota ? 'Free limit reached' : 'Couldn’t rate · retry', entry.quota ? 'paused' : 'error', entry.error || 'Retry this post');
   } else {
-    label(entry, entry.state === 'pending' ? `Checking with ${detectorName}` : `Queued for ${detectorName}`, 'pending', entry.state === 'pending' ? `Checking with ${detectorName}` : 'Waiting to check this post when it is in view.');
+    label(entry, entry.state === 'pending' ? `Checking with ${detectorName}` : `Queued for ${detectorName}`, 'pending', entry.state === 'pending' ? `Checking with ${detectorName}` : 'Queued');
   }
 }
 function makeEntry(article: HTMLElement, post: Post): Entry {
@@ -223,17 +233,17 @@ function makeEntry(article: HTMLElement, post: Post): Entry {
   const host = document.createElement('jev-slop-label');
   const shadow = host.attachShadow({ mode: 'open' });
   const style = document.createElement('style'); style.textContent = CSS;
-  const button = document.createElement('button'); button.type = 'button'; button.className = 'badge'; button.setAttribute('aria-expanded', 'false');
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'badge';
   const reveal = document.createElement('button'); reveal.type = 'button'; reveal.className = 'reveal'; reveal.hidden = true;
-  const details = document.createElement('div'); details.className = 'details'; details.hidden = true;
-  shadow.append(style, button, reveal, details);
-  const entry: Entry = { article, host, button, details, post, fingerprint: `${post.id}:${postContentKey(post, settings)}`, visible: false, visibleSince: 0, state: 'idle', attempts: 0, nextTry: 0, token: 0, concealed: [], revealed: false, reveal };
+  shadow.append(style, button, reveal);
+  const entry: Entry = { article, host, button, post, fingerprint: `${post.id}:${postContentKey(post, settings)}`, visible: false, visibleSince: 0, state: 'idle', attempts: 0, nextTry: 0, token: 0, concealed: [], revealed: false, reveal };
   reveal.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); entry.revealed = !entry.revealed; effects(entry); });
   button.addEventListener('click', event => {
     event.preventDefault(); event.stopPropagation();
-    if (entry.state === 'error' && !entry.quota) { entry.state = 'idle'; entry.attempts = 0; entry.nextTry = 0; paint(entry); pump(); }
-    details.hidden = !details.hidden;
-    button.setAttribute('aria-expanded', String(!details.hidden));
+    if (button.dataset.tone === 'error') { entry.state = 'idle'; entry.attempts = 0; entry.nextTry = 0; paint(entry); pump(); return; }
+    void chrome.runtime.sendMessage({ type: 'openSettings' }).catch(() => {
+      button.title = 'Reload this page';
+    });
   });
   placeHost(entry);
   paint(entry);
@@ -333,8 +343,6 @@ function scan() {
     else if (previous.fingerprint !== fingerprint) {
       previous.token++;
       Object.assign(previous, { post, fingerprint, state: 'idle', attempts: 0, nextTry: 0, verdict: undefined, error: undefined, quota: false, revealed: false, visibleSince: 0 });
-      previous.details.hidden = true;
-      previous.button.setAttribute('aria-expanded', 'false');
       if (!previous.host.isConnected) placeHost(previous);
       paint(previous);
     } else if (!previous.host.isConnected) { placeHost(previous); paint(previous); }

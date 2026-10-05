@@ -1,11 +1,11 @@
 # Install or update Slop Detector
 
-Version **2.1.0** supports posts, comments and replies on **X and LinkedIn**.
+Version **2.1.2** supports posts, comments and replies on **X and LinkedIn**.
 
 ## Update your existing installation
 
 1. Open **chrome://extensions** in Chrome.
-2. Find **Slop Detector** and click **Reload**. The version should show **2.1.0**.
+2. Find **Slop Detector** and click **Reload**. The version should show **2.1.2**.
 3. Ensure the extension has access to X and LinkedIn. If its popup shows **Allow access**, click it to approve access to your selected API provider; your saved key is retained.
 4. Refresh your X and LinkedIn tabs.
 
@@ -22,20 +22,22 @@ Provider permissions are now optional. The update removes old grants for provide
 
    In the Mac folder picker, press **⌘⇧G**, paste the path, and select **dist**.
 3. Pin **Slop Detector** from Chrome’s Extensions menu.
-4. Open its popup. Choose **GPTZero → Enable GPTZero** for the sponsored service, if configured in this build. Or select **Jev**, choose a provider, paste its API key, and click **Connect**. Approve access to that provider when Chrome asks. This then makes a small evaluation to verify the key before saving it. Provider charges may apply.
+4. Open its popup. Choose **GPTZero** for the sponsored service, if configured in this build. Or select **Jev**, choose a provider, paste its API key, and click **Connect**. Approve access to that provider when Chrome asks. This then makes a small evaluation to verify the key before saving it. Provider charges may apply.
 5. Open or refresh X or LinkedIn and scroll. Open comment threads or load replies normally; each is checked independently as it appears.
 
-Keep the extension folder in place. To install from `slop-detector.zip` on another computer, unzip it to a permanent folder and load that folder. End users do not need to deploy a server. The extension publisher sets up the sponsored GPTZero proxy once using [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md). Jev works directly with your own key.
+Keep the extension folder in place. To install from `slop-detector.zip` on another computer, unzip it to a permanent folder and load that folder. End users do not need to deploy a server. The extension publisher sets up the sponsored GPTZero proxy once using [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md). Jev and personal GPTZero keys work directly without a proxy.
 
 Checks start only when the item's own text stays on screen for a quarter-second. Posts and comments further down the page wait until you reach them, and queued checks or retries stay idle while offscreen. Background tabs stay idle. A request already sent can still finish and save its result.
 
 ## GPTZero
 
-The publisher must deploy the proxy and build its public URL into the extension; see [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md). GPTZero does not need an API key from individual users. Click **Enable GPTZero** and grant permission to the proxy host. Enabling only reads your quota; it does not spend a GPTZero evaluation.
+For free scanning, the publisher must deploy the proxy and build its public URL into the extension; see [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md). GPTZero does not need an API key from individual users. Select the **GPTZero** tab and grant permission to the proxy host. Enabling only reads your quota; it does not spend a GPTZero evaluation.
 
-The popup shows the installation's weekly allowance and reset time. Shared IP/service limits can stop new evaluations earlier. Clearing cache, pausing or switching detectors does not reset server quota. Cached scores can still be reused at the limit. Choose Jev with your own key to continue; no automatic paid fallback occurs.
+The popup shows the installation's weekly allowance and reset time. Shared IP/service limits can stop new evaluations earlier. Clearing cache, pausing or switching detectors does not reset server quota. Cached scores can still be reused at the limit. To continue, select **Access → Your API key**, enter a personal [GPTZero API key](https://app.gptzero.me/app/api), and click **Connect**. Approve access to **api.gptzero.me**. The key is checked with one short sample before saving; this uses your own GPTZero credits. Visible items then go directly to GPTZero, without the sponsored proxy or its allowance. You can also choose Jev with your own key. No automatic paid fallback occurs.
 
-GPTZero's AI and mixed probabilities are added to form the Slop score. Not slop displays the complementary probability. This is a model estimate, not a percentage of AI-written words or a judgment of a post's value. Open badge details for the original Human / Mixed human/AI / AI-generated category and model confidence. Text the API cannot evaluate stays **Unrated**.
+Choose **Access → Free** to return to the sponsored allowance. Personal mode remains selected across Chrome restarts. It works even in builds without a proxy URL. Free usage is hidden while personal mode is active. Both GPTZero routes reuse local scores and limit scanning to one request at a time, at least 3.1 seconds apart; provider rate limits are respected. A failed replacement keeps the saved key. **Remove saved key** deletes it and releases the direct API permission; select Free explicitly if you want to resume sponsored scanning.
+
+GPTZero uses only the AI probability for the Slop score. It must classify the item as **AI**, and that score must meet your threshold, before a Slop label, stamp, fade or hide is applied. **Mixed** (including AI-polished human writing) and **Human** results remain Not slop, even with a low threshold. Not slop displays one minus the AI probability. Existing cached scores are corrected from their saved class probabilities without another API call. This is a model estimate, not a percentage of AI-written words or a judgment of a post's value. Click a Slop or Not slop label to open the extension settings. Text the API cannot evaluate stays **Unrated**.
 
 ## Jev provider keys
 
@@ -62,8 +64,8 @@ The percentage shows confidence in the displayed label: **Slop** uses the estima
 ## Appearance
 
 - **Show not-slop:** display or suppress Not slop badges.
-- **Checking radar:** a small gray radar animates while the selected detector checks an item. When Show not-slop is on it occupies the result's row; when off it sits just below the left edge of the text without adding height. Queued items stay still, and reduced-motion preferences are respected.
-- **Show score:** display or suppress percentages on badges and in their details.
+- **Checking radar:** shown only when Show not-slop is on, in the result's row. Turning Show not-slop off hides both checking and queued indicators. Scanning continues in the background. Reduced-motion preferences are respected.
+- **Show score:** display or suppress percentages on badges.
 - **Stamp:** a large red SLOP stamp drops onto flagged content. It allows clicks through and fades on hover or keyboard focus. Reduced-motion settings disable the animation.
 - **Fade out:** fade flagged text and media; hover restores readability.
 - **Hide (default):** collapse flagged content into a compact **Slop detected - Show post** row. Click it to expand the post. Replies remain independently accessible. Click **Hide post** to collapse it again.
@@ -74,7 +76,7 @@ Pause with the top switch. Pausing restores hidden/faded content and removes sta
 
 Only loaded, readable post/comment/reply text is evaluated. Images, videos, linked pages, author profiles and reaction counts are not analyzed. Draft editors are ignored. Each comment/reply is evaluated separately from its parent. Up to 6,000 characters are sent per item; editing or expanding text triggers a new check.
 
-Jev keys and your prompt stay in trusted local extension storage, without Chrome Sync. GPTZero sends text through the publisher's proxy and uses an anonymous installation ID for quotas. Its shared API key stays on the server. The local session cache contains hashes and scores, not item text. See [PRIVACY.md](PRIVACY.md) for storage details and provider data flows.
+Personal GPTZero and Jev keys and your prompt stay in trusted local extension storage, without Chrome Sync. Free GPTZero sends text through the publisher's proxy and uses an anonymous installation ID for quotas. Personal GPTZero sends text directly to its API. Its shared API key stays on the server. The local session cache contains hashes and scores, not item text. See [PRIVACY.md](PRIVACY.md) for storage details and provider data flows.
 
 ## Troubleshooting
 

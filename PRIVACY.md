@@ -1,10 +1,10 @@
 # Slop Detector privacy
 
-Updated 30 September 2026 · Extension version 2.1.0
+Updated 5 October 2026 · Extension version 2.1.2
 
 Slop Detector evaluates readable posts, comments and replies on X and LinkedIn using the detector you choose. Existing installs keep Jev selected. New installs start in GPTZero setup mode; scanning through the proxy requires you to enable it and grant its site permission.
 
-## GPTZero mode
+## Free GPTZero mode
 
 The extension sends up to 6,000 characters of the visible item's text to the publisher's Cloudflare proxy. The proxy forwards only that text to GPTZero's text-detection API using the sponsored API key stored in Cloudflare Secrets. Your Jev prompt and personal keys are not sent through this route.
 
@@ -13,6 +13,12 @@ An anonymous random installation ID accompanies proxy requests. Cloudflare also 
 The application does not log request bodies or provider responses, and Worker observability is disabled in the supplied configuration. Cloudflare and GPTZero process requests under their own applicable terms and privacy policies; this integration does not promise zero retention by those providers. The proxy returns only probabilities, classifications, timing, allowance information and sanitized messages. It does not return the shared API key or raw GPTZero response.
 
 The proxy stores counters so clear-cache, normal service restarts, pausing and detector switches cannot reset an allowance. Installation IDs are not authenticated user accounts. Shared IP and global service limits can apply before the displayed weekly allowance is used up.
+
+## Personal GPTZero key
+
+Selecting **Your API key** uses your personal GPTZero account directly. The background service worker sends only the item text (up to 6,000 characters) as `document` to `https://api.gptzero.me/v2/predict/text`, with your key in the `x-api-key` header. No prompt, installation ID, cookies or sponsored proxy is used. GPTZero receives your IP address as part of the direct connection. Clicking Connect makes one short sample evaluation to validate the key before saving it; your account's credits or charges apply. Provider data handling follows GPTZero's policies.
+
+The free route never switches automatically to a personal key. The selected route persists until you change it. A failed replacement preserves the previous key, and a cancelled or timed-out check cannot save its candidate.
 
 ## Jev mode
 
@@ -28,7 +34,7 @@ No additional author metadata, profile, post ID, page URL, media file, cookie or
 
 ## Stored in this Chrome profile
 
-- Jev provider keys and preferences, including your custom prompt, are saved in trusted local extension storage, without application-level encryption or Chrome Sync. We recommend a dedicated personal API key and a spending cap where supported.
+- Personal GPTZero and Jev provider keys and preferences, including your custom prompt, are saved in trusted local extension storage, without application-level encryption or Chrome Sync. We recommend a dedicated personal API key and a spending cap where supported.
 - The anonymous installation ID, public proxy URL associated with activation and last-known weekly usage are stored locally. They survive Chrome restarts.
 - A session cache holds at most 800 hashes and sanitized scores, with a 24-hour expiry. Text is not persisted. GPTZero hashes cover the detector version and text; Jev hashes also cover the provider, model and prompt.
 - Session counters record evaluation count, cache hits, latency and sanitized errors.
@@ -37,6 +43,6 @@ Social-site content scripts cannot read stored keys or the installation ID, chan
 
 ## Your controls
 
-Pause scanning, switch detectors, edit the Jev prompt, remove individual personal keys, or clear local cached scores. Removing a Jev key releases its host permission. Revoking the proxy/provider permission stops new requests while retaining saved settings. Uninstalling removes the extension's local storage, but does not immediately remove previously created server counters or cache entries; those expire as described above. Requests already received by a provider cannot be retracted.
+Pause scanning, switch detectors, edit the Jev prompt, remove individual personal keys, or clear local cached scores. Removing a personal GPTZero or Jev key releases its host permission. Revoking the proxy/provider permission stops new requests while retaining saved settings. Uninstalling removes the extension's local storage, but does not immediately remove previously created server counters or cache entries; those expire as described above. Requests already received by a provider cannot be retracted.
 
-Required permissions cover storage and supported social sites. The three Jev provider hosts and, in configured builds, the single proxy host are optional. Each is requested in a user action when enabling or connecting its provider. The extension never falls back to spending a personal Jev key without you selecting Jev. All extension code and styling are bundled locally. There is no application analytics or advertising telemetry, and the application does not sell data.
+Required permissions cover storage and supported social sites. The three Jev provider hosts, the direct GPTZero API host, and, in configured builds, the single proxy host are optional. Each is requested in a user action when enabling or connecting its provider. The extension never falls back to spending personal GPTZero or Jev credits without you selecting that route. All extension code and styling are bundled locally. There is no application analytics or advertising telemetry, and the application does not sell data.
