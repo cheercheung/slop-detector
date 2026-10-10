@@ -55,7 +55,7 @@ export function createStamp(article: HTMLElement): SlopStamp {
   for (let i = 0; i < 12; i++) {
     const particle = document.createElement('i');
     particle.className = 'dust';
-    const angle = i * Math.PI / 6;
+    const angle = (i * Math.PI) / 6;
     particle.style.setProperty('--dx', `${Math.cos(angle) * 180}px`);
     particle.style.setProperty('--dy', `${Math.sin(angle) * 80}px`);
     particle.style.setProperty('--spin', `${i * 37}deg`);
@@ -73,28 +73,42 @@ export function createStamp(article: HTMLElement): SlopStamp {
     if (!rect.width || !rect.height) return;
     const anchor = labelAnchor(article)?.getBoundingClientRect();
     // Stop the overlay above separately rated replies, even inside a long thread.
-    const children = Array.from(article.querySelectorAll<HTMLElement>('[data-jev-target]')).map(node => node.getBoundingClientRect()).filter(child => child.width && child.height && child.top > rect.top);
-    const height = Math.min(rect.height, ...children.map(child => child.top - rect.top));
+    const children = Array.from(article.querySelectorAll<HTMLElement>('[data-jev-target]'))
+      .map((node) => node.getBoundingClientRect())
+      .filter((child) => child.width && child.height && child.top > rect.top);
+    const height = Math.min(rect.height, ...children.map((child) => child.top - rect.top));
     host.style.setProperty('--stamp-height', `${height}px`);
-    const center = anchor ? anchor.top - rect.top + Math.min(anchor.height, 260) / 2 : rect.height / 2;
-    const angle = 12 * Math.PI / 180;
-    const rotatedHeight = position.offsetHeight * Math.cos(angle) + position.offsetWidth * Math.sin(angle);
-    const rotatedWidth = position.offsetWidth * Math.cos(angle) + position.offsetHeight * Math.sin(angle);
-    const fit = Math.max(.1, Math.min(1, (height - 16) / rotatedHeight, (rect.width - 16) / rotatedWidth));
-    const half = rotatedHeight * fit / 2 + 8;
+    const center = anchor
+      ? anchor.top - rect.top + Math.min(anchor.height, 260) / 2
+      : rect.height / 2;
+    const angle = (12 * Math.PI) / 180;
+    const rotatedHeight =
+      position.offsetHeight * Math.cos(angle) + position.offsetWidth * Math.sin(angle);
+    const rotatedWidth =
+      position.offsetWidth * Math.cos(angle) + position.offsetHeight * Math.sin(angle);
+    const fit = Math.max(
+      0.1,
+      Math.min(1, (height - 16) / rotatedHeight, (rect.width - 16) / rotatedWidth),
+    );
+    const half = (rotatedHeight * fit) / 2 + 8;
     const y = `${Math.round(Math.min(Math.max(half, center), height - half))}px`;
-    if (host.style.getPropertyValue('--stamp-fit') !== String(fit)) host.style.setProperty('--stamp-fit', String(fit));
+    if (host.style.getPropertyValue('--stamp-fit') !== String(fit))
+      host.style.setProperty('--stamp-fit', String(fit));
     if (host.style.getPropertyValue('--impact-y') !== y) host.style.setProperty('--impact-y', y);
   };
   const resize = new ResizeObserver(() => {
-    if (!frame) frame = requestAnimationFrame(() => { frame = 0; refresh(); });
+    if (!frame)
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        refresh();
+      });
   });
   resize.observe(article);
   refresh();
 
   // A result can arrive after scrolling away; save the punchline until visible again.
-  const visibility = new IntersectionObserver(changes => {
-    if (!changes.some(change => change.isIntersecting) || document.hidden) return;
+  const visibility = new IntersectionObserver((changes) => {
+    if (!changes.some((change) => change.isIntersecting) || document.hidden) return;
     host.setAttribute('data-dropped', 'true');
     visibility.disconnect();
   });

@@ -18,9 +18,7 @@ Provider permissions are now optional. The update removes old grants for provide
 1. Open **chrome://extensions** and enable **Developer mode**.
 2. Click **Load unpacked**, then choose:
 
-   `/Users/robin/Documents/ChatGPT/Slop detector/dist`
-
-   In the Mac folder picker, press **⌘⇧G**, paste the path, and select **dist**.
+   The `dist` directory inside your clone of this repository. Run `npm run build` first.
 3. Pin **Slop Detector** from Chrome’s Extensions menu.
 4. Open its popup and click **Allow GPTZero access** for free scanning. Or select **Jev**, choose a provider, paste its API key, and click **Connect**. Approve access to that provider when Chrome asks. This then makes a small evaluation to verify the key before saving it. Provider charges may apply.
 5. Open or refresh X or LinkedIn and scroll. Open comment threads or load replies normally; each is checked independently as it appears.

@@ -8,3 +8,16 @@ test-results/
 .env*
 proxy.config.json
 .demo/
+
+# Local deployment settings and generated/private artifacts
+**/wrangler*.json
+**/wrangler*.jsonc
+**/wrangler*.toml
+coverage/
+.DS_Store
+store-listing-draft.jpg
+proxy/static/privacy/
+*.tsbuildinfo
+
+# Private pre-publication history backup (never commit or upload)
+.private-backups/

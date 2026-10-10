@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      vitest:
+        patterns: ['vitest', '@vitest/*']
+      cloudflare:
+        patterns: ['wrangler', 'miniflare', '@cloudflare/*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

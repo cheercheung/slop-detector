@@ -1,0 +1,19 @@
+// The same allowlist is used to validate dist/ and create the release archive.
+export const RELEASE_FILES = [
+  'manifest.json',
+  'background.js',
+  'content.js',
+  'popup.js',
+  'popup.html',
+  'popup.css',
+  'icons/radar.svg',
+  'icons/16.png',
+  'icons/32.png',
+  'icons/48.png',
+  'icons/128.png',
+  'fonts/Geist-Variable.woff2',
+  'fonts/OFL.txt',
+  'fonts/README.txt',
+  'LICENSE',
+  'PRIVACY.md',
+];

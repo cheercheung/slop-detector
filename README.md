@@ -1,24 +1,58 @@
 # Slop Detector
 
-Chrome extension for X and LinkedIn posts, comments and replies. Version **2.1.3** offers sponsored GPTZero detection through a Cloudflare Worker, or a personal GPTZero key that calls its API directly. Users can explicitly switch to their own key when the free allowance runs out. GPTZero flags only AI-classified text above the chosen threshold; Mixed/AI-polished results are excluded. Jev keeps the editable prompt and AI Gateway, OpenRouter and direct TypeSafe key options.
+Chrome extension that marks AI slop on X and LinkedIn, including comments and replies.
 
-- [Set up the Cloudflare proxy](CLOUDFLARE_SETUP.md)
-- [Install or update the extension](INSTALL.md)
-- [Privacy and data flow](PRIVACY.md)
+- GPTZero with a free allowance or your own API key. Mixed/AI-polished results are excluded.
+- Jev with a custom prompt through AI Gateway, OpenRouter, or TypeSafe.
+- Stamp, fade, or collapse flagged posts. Only visible items are checked.
+
+## Development
+
+Use Node **24.18+ (24.x)** and npm. No API keys are needed to build or test.
 
 ```sh
 npm ci
 npm run check
-npm run package
 ```
 
-Configure the proxy's public HTTPS URL before packaging for GPTZero:
+| Command | What it does |
+| --- | --- |
+| `npm run lint` | Biome linting and formatting checks |
+| `npm run lint:fix` | Apply safe lint fixes and formatting |
+| `npm run format` | Format source files |
+| `npm run typecheck` | Strict TypeScript checks for extension, demo, tests, scripts, and Worker |
+| `npm test` | Vitest regression tests |
+| `npm run test:watch` | Watch tests while editing |
+| `npm run test:coverage` | Coverage report in `coverage/` |
+| `npm run check` | Lint, types, coverage, build, release-file checks, and repository hygiene |
+| `npm run check:all` | Above plus Worker and Chromium integration tests |
+| `npm run demo` | Local fictional feed for screenshots |
+| `npm run package` | Validate and create `slop-detector.zip` |
+
+For the browser suite, install Chromium first:
 
 ```sh
-npm run configure:proxy -- https://slop-detector-proxy.your-subdomain.workers.dev
-npm run package
+npx playwright install chromium
+npm run check:all
 ```
 
-A build without a proxy URL shows free scanning as unavailable; personal GPTZero keys and Jev remain usable. Never put the sponsored API key in the extension or its build configuration. Follow the setup guide to store it in Cloudflare Secrets and enable the proxy only after setting the sponsored allowance.
+Tests use mock providers and temporary storage. They do not contact paid APIs or deploy anything. The HTTPS browser fixture also requires `openssl`; packaging requires `zip` (available on macOS and Ubuntu).
 
-The proxy uses SQLite Durable Objects for atomic quotas, a score-only cache, shared provider cooldowns and a kill switch. It is compatible with the Workers Free plan; no external database is needed. No deployment is performed by build or package commands.
+Load `dist/` as an unpacked extension at `chrome://extensions`. A build without a proxy URL supports personal keys; free GPTZero scanning requires your own [Cloudflare proxy](CLOUDFLARE_SETUP.md).
+
+## Layout
+
+- `src/` — content script, popup, background service worker, provider clients
+- `public/` — popup markup/styles, radar icon, bundled font
+- `proxy/` — Cloudflare Worker and atomic quota storage
+- `tests/` — unit tests, DOM fixtures, browser and Worker integration tests
+- `demo/` — fictional screenshot feed
+- `scripts/` — build, packaging, and local setup
+
+Real Wrangler config, proxy URL config, credentials, and build output stay local and ignored. The release ZIP uses an explicit allowlist and contains no Worker config or source.
+
+[Install](INSTALL.md) · [Contribute](CONTRIBUTING.md) · [Security](SECURITY.md) · [Privacy](PRIVACY.md)
+
+## License
+
+[MIT](LICENSE). Geist is distributed under its own [SIL Open Font License](public/fonts/OFL.txt), included in the extension. Dependencies retain their respective licenses.

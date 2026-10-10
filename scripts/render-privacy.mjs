@@ -3,18 +3,34 @@ import { fileURLToPath } from 'node:url';
 
 const root = new URL('../', import.meta.url);
 const source = await readFile(new URL('PRIVACY.md', root), 'utf8');
-const escape = text => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
-const inline = text => escape(text)
-  .replace(/`([^`]+)`/g, '<code>$1</code>')
-  .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+/** @param {string} text */
+const escapeHtml = (text) =>
+  text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+/** @param {string} text */
+const inline = (text) =>
+  escapeHtml(text)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 // The policy uses headings, paragraphs and unordered lists only. Escape all
 // source HTML; no remote renderer, scripts, fonts, tracking or dependencies.
-const sections = source.trim().split(/\n\s*\n/).map(block => {
-  if (block.startsWith('# ')) return `<h1>${inline(block.slice(2))}</h1>`;
-  if (block.startsWith('## ')) return `<h2>${inline(block.slice(3))}</h2>`;
-  if (block.startsWith('- ')) return `<ul>${block.split('\n').map(line => `<li>${inline(line.replace(/^- /, ''))}</li>`).join('')}</ul>`;
-  return `<p>${inline(block.replaceAll('\n', ' '))}</p>`;
-}).join('\n');
+const sections = source
+  .trim()
+  .split(/\n\s*\n/)
+  .map((block) => {
+    if (block.startsWith('# ')) return `<h1>${inline(block.slice(2))}</h1>`;
+    if (block.startsWith('## ')) return `<h2>${inline(block.slice(3))}</h2>`;
+    if (block.startsWith('- '))
+      return `<ul>${block
+        .split('\n')
+        .map((line) => `<li>${inline(line.replace(/^- /, ''))}</li>`)
+        .join('')}</ul>`;
+    return `<p>${inline(block.replaceAll('\n', ' '))}</p>`;
+  })
+  .join('\n');
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="How Slop Detector handles post text, API keys, detection results and free scanning allowances.">

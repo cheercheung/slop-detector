@@ -6,10 +6,10 @@
   "scripts": {
     "demo": "node scripts/demo.mjs",
     "build": "node scripts/build.mjs",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p proxy/tsconfig.json",
-    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tests/tsconfig.json && tsc -p proxy/tsconfig.json && tsc -p scripts/tsconfig.json",
+    "test": "vitest run",
     "test:browser": "node tests/browser.mjs && node tests/viewport.mjs && node tests/loading.mjs",
-    "check": "npm run typecheck && npm test && npm run build && npm run test:browser && npm run test:proxy && npm run test:gptzero",
+    "check": "npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run test:package && npm run check:repo",
     "package": "npm run build && node scripts/package.mjs",
     "configure:proxy": "node scripts/configure-proxy.mjs",
     "proxy:login": "wrangler login",
@@ -17,7 +17,15 @@
     "privacy:build": "node scripts/render-privacy.mjs",
     "proxy:deploy": "npm run privacy:build && wrangler deploy --config proxy/wrangler.jsonc",
     "test:proxy": "node tests/proxy.mjs",
-    "test:gptzero": "node tests/gptzero-browser.mjs"
+    "test:gptzero": "node tests/gptzero-browser.mjs",
+    "lint": "biome check --error-on-warnings .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "check:all": "npm run check && npm run test:proxy && npm run test:browser && npm run test:gptzero",
+    "test:package": "node scripts/check-package.mjs",
+    "check:repo": "node scripts/check-repository.mjs"
   },
   "dependencies": {
     "@ai-sdk/gateway": "4.0.86",
@@ -26,15 +34,28 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20260930.2",
+    "@biomejs/biome": "2.5.15",
+    "@cloudflare/workers-types": "5.20261010.1",
     "@resvg/resvg-js": "2.6.2",
     "@types/chrome": "^0.1.0",
+    "@types/jsdom": "30.0.0",
     "@types/node": "^24.0.0",
-    "esbuild": "^0.25.0",
-    "miniflare": "5.20260930.0-alpha",
+    "@vitest/coverage-v8": "5.0.3",
+    "esbuild": "0.28.2",
+    "jsdom": "30.1.2",
+    "miniflare": "5.20261006.1-alpha",
     "playwright": "^1.55.0",
-    "tsx": "^4.20.0",
     "typescript": "^5.9.0",
-    "wrangler": "4.145.0"
+    "vitest": "5.0.3",
+    "wrangler": "4.149.0"
+  },
+  "description": "A Chrome extension that flags AI slop on X and LinkedIn.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.18.0 <25"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rbilgil/slop-detector.git"
   }
 }

@@ -1,16 +1,60 @@
+import {
+  dimContent,
+  extractPost,
+  findPosts,
+  labelAlignmentAnchor,
+  labelAnchor,
+  ownsNode,
+} from './extract';
 import { fontReady } from './font';
-import { dimContent, extractPost, findPosts, labelAnchor, labelAlignmentAnchor, ownsNode } from './extract';
-import { DEFAULT_SETTINGS, detectionChanged, hasReadableText, isSlopVerdict, postContentKey, type Post, type PublicSettings, type Classification, type Verdict } from './shared';
+import {
+  type Classification,
+  DEFAULT_SETTINGS,
+  detectionChanged,
+  hasReadableText,
+  isSlopVerdict,
+  type Post,
+  type PublicSettings,
+  postContentKey,
+  type Verdict,
+} from './shared';
 import { createStamp, type SlopStamp } from './stamp';
 
-type Entry = { article: HTMLElement; host: HTMLElement; button: HTMLButtonElement; post: Post; fingerprint: string; visible: boolean; visibleSince: number; visibilityTarget?: HTMLElement; radarAnchor?: HTMLElement; state: 'idle' | 'pending' | 'done' | 'error' | 'unrated'; attempts: number; nextTry: number; verdict?: Verdict; stamp?: SlopStamp; error?: string; quota?: boolean; token: number; concealed: HTMLElement[]; revealed: boolean; reveal: HTMLButtonElement };
+type Entry = {
+  article: HTMLElement;
+  host: HTMLElement;
+  button: HTMLButtonElement;
+  post: Post;
+  fingerprint: string;
+  visible: boolean;
+  visibleSince: number;
+  visibilityTarget?: HTMLElement;
+  radarAnchor?: HTMLElement;
+  state: 'idle' | 'pending' | 'done' | 'error' | 'unrated';
+  attempts: number;
+  nextTry: number;
+  verdict?: Verdict;
+  stamp?: SlopStamp;
+  error?: string;
+  quota?: boolean;
+  token: number;
+  concealed: HTMLElement[];
+  revealed: boolean;
+  reveal: HTMLButtonElement;
+};
 const entries = new Map<HTMLElement, Entry>();
 const visibilityTargets = new Map<Element, Entry>();
 const radarAnchors = new Map<HTMLElement, number>();
 const VISIBLE_DELAY = 250;
 const linkedIn = location.hostname === 'linkedin.com' || location.hostname === 'www.linkedin.com';
-const alignmentResize = new ResizeObserver(changes => {
-  for (const change of changes) { const entry = entries.get(change.target as HTMLElement); if (entry) { alignLabel(entry); positionRadar(entry); } }
+const alignmentResize = new ResizeObserver((changes) => {
+  for (const change of changes) {
+    const entry = entries.get(change.target as HTMLElement);
+    if (entry) {
+      alignLabel(entry);
+      positionRadar(entry);
+    }
+  }
 });
 let settings: PublicSettings = { ...DEFAULT_SETTINGS, configured: false, cacheEpoch: 0 };
 let running = 0;
@@ -61,16 +105,20 @@ document.documentElement.append(dimStyle);
 
 function clearDim(article: HTMLElement) {
   article.removeAttribute('data-jev-dim');
-  article.querySelectorAll('[data-jev-dimmed]').forEach(node => { if (node.closest('[data-jev-target]') === article) node.removeAttribute('data-jev-dimmed'); });
+  article.querySelectorAll('[data-jev-dimmed]').forEach((node) => {
+    if (node.closest('[data-jev-target]') === article) node.removeAttribute('data-jev-dimmed');
+  });
 }
 function applyDim(article: HTMLElement) {
   const targets = new Set(dimContent(article));
   if (article.getAttribute('data-jev-dim') !== 'true') article.setAttribute('data-jev-dim', 'true');
-  article.querySelectorAll<HTMLElement>('[data-jev-dimmed]').forEach(node => {
-    if (node.closest('[data-jev-target]') === article && !targets.has(node)) node.removeAttribute('data-jev-dimmed');
+  article.querySelectorAll<HTMLElement>('[data-jev-dimmed]').forEach((node) => {
+    if (node.closest('[data-jev-target]') === article && !targets.has(node))
+      node.removeAttribute('data-jev-dimmed');
   });
   for (const node of targets) {
-    if (node.getAttribute('data-jev-dimmed') !== 'true') node.setAttribute('data-jev-dimmed', 'true');
+    if (node.getAttribute('data-jev-dimmed') !== 'true')
+      node.setAttribute('data-jev-dimmed', 'true');
   }
 }
 function clearConcealed(entry: Entry) {
@@ -79,18 +127,35 @@ function clearConcealed(entry: Entry) {
   entry.concealed = [];
 }
 function alignLabel(entry: Entry) {
-  if (!linkedIn || !entry.host.isConnected || entry.host.hidden || entry.host.hasAttribute('data-floating')) return;
+  if (
+    !linkedIn ||
+    !entry.host.isConnected ||
+    entry.host.hidden ||
+    entry.host.hasAttribute('data-floating')
+  )
+    return;
   const anchor = labelAlignmentAnchor(entry.article);
   if (!anchor) return;
-  const text = anchor.getBoundingClientRect(), host = entry.host.getBoundingClientRect();
+  const text = anchor.getBoundingClientRect(),
+    host = entry.host.getBoundingClientRect();
   // Keep the last measured inset while Hide conceals the original text.
   if (!text.width || !text.height || !host.width) return;
   const css = getComputedStyle(anchor);
-  const left = Math.max(0, text.left + parseFloat(css.borderLeftWidth) + parseFloat(css.paddingLeft) - host.left);
-  const right = Math.max(0, host.right - text.right + parseFloat(css.borderRightWidth) + parseFloat(css.paddingRight));
-  for (const [property, value] of [['--jev-label-left', left], ['--jev-label-right', right]] as const) {
+  const left = Math.max(
+    0,
+    text.left + parseFloat(css.borderLeftWidth) + parseFloat(css.paddingLeft) - host.left,
+  );
+  const right = Math.max(
+    0,
+    host.right - text.right + parseFloat(css.borderRightWidth) + parseFloat(css.paddingRight),
+  );
+  for (const [property, value] of [
+    ['--jev-label-left', left],
+    ['--jev-label-right', right],
+  ] as const) {
     const pixels = `${Math.round(value * 100) / 100}px`;
-    if (entry.host.style.getPropertyValue(property) !== pixels) entry.host.style.setProperty(property, pixels);
+    if (entry.host.style.getPropertyValue(property) !== pixels)
+      entry.host.style.setProperty(property, pixels);
   }
 }
 function releaseRadarAnchor(entry: Entry) {
@@ -98,26 +163,33 @@ function releaseRadarAnchor(entry: Entry) {
   if (!anchor) return;
   const count = (radarAnchors.get(anchor) ?? 1) - 1;
   if (count) radarAnchors.set(anchor, count);
-  else { radarAnchors.delete(anchor); anchor.removeAttribute('data-jev-radar-anchor'); }
+  else {
+    radarAnchors.delete(anchor);
+    anchor.removeAttribute('data-jev-radar-anchor');
+  }
   entry.radarAnchor = undefined;
 }
 function positionRadar(entry: Entry) {
-  const floating = !entry.host.hidden && entry.host.hasAttribute('data-floating') && entry.host.isConnected;
+  const floating =
+    !entry.host.hidden && entry.host.hasAttribute('data-floating') && entry.host.isConnected;
   let container = floating ? entry.host.parentElement : null;
   // Keep the overlay beside the text, outside any clamped/overflow-hidden text
   // box, and give it a local containing block that moves with the post.
-  while (container && ['contents', 'inline'].includes(getComputedStyle(container).display)) container = container.parentElement;
+  while (container && ['contents', 'inline'].includes(getComputedStyle(container).display))
+    container = container.parentElement;
   if (entry.radarAnchor !== container) {
     releaseRadarAnchor(entry);
     if (container) {
-      if (getComputedStyle(container).position === 'static') container.setAttribute('data-jev-radar-anchor', 'true');
+      if (getComputedStyle(container).position === 'static')
+        container.setAttribute('data-jev-radar-anchor', 'true');
       radarAnchors.set(container, (radarAnchors.get(container) ?? 0) + 1);
       entry.radarAnchor = container;
     }
   }
   const anchor = floating && (labelAlignmentAnchor(entry.article) ?? labelAnchor(entry.article));
   if (!container || !anchor) return;
-  const text = anchor.getBoundingClientRect(), bounds = container.getBoundingClientRect();
+  const text = anchor.getBoundingClientRect(),
+    bounds = container.getBoundingClientRect();
   if (!text.width || !text.height) return;
   const css = getComputedStyle(anchor);
   // Measure scale from the fixed-size indicator; parent offset dimensions are
@@ -125,15 +197,28 @@ function positionRadar(entry: Entry) {
   const marker = entry.button.getBoundingClientRect();
   const scaleX = marker.width / entry.button.offsetWidth || 1;
   const scaleY = marker.height / entry.button.offsetHeight || 1;
-  const left = (text.left - bounds.left) / scaleX - container.clientLeft + container.scrollLeft + parseFloat(css.paddingLeft) + parseFloat(css.borderLeftWidth);
+  const left =
+    (text.left - bounds.left) / scaleX -
+    container.clientLeft +
+    container.scrollLeft +
+    parseFloat(css.paddingLeft) +
+    parseFloat(css.borderLeftWidth);
   const top = (text.bottom - bounds.top) / scaleY - container.clientTop + container.scrollTop + 1;
-  for (const [property, value] of [['--jev-radar-left', left], ['--jev-radar-top', top]] as const) {
+  for (const [property, value] of [
+    ['--jev-radar-left', left],
+    ['--jev-radar-top', top],
+  ] as const) {
     const pixels = `${Math.round(value * 100) / 100}px`;
-    if (entry.host.style.getPropertyValue(property) !== pixels) entry.host.style.setProperty(property, pixels);
+    if (entry.host.style.getPropertyValue(property) !== pixels)
+      entry.host.style.setProperty(property, pixels);
   }
 }
 function effects(entry: Entry) {
-  const slop = settings.enabled && settings.configured && entry.verdict && isSlopVerdict(entry.verdict, settings.threshold);
+  const slop =
+    settings.enabled &&
+    settings.configured &&
+    entry.verdict &&
+    isSlopVerdict(entry.verdict, settings.threshold);
   // Layout reads below flush styles. Clearing an existing fade first would
   // briefly restore full opacity and restart its transition on every scan.
   if (slop && settings.theme === 'fade') applyDim(entry.article);
@@ -141,18 +226,32 @@ function effects(entry: Entry) {
   clearConcealed(entry);
   alignLabel(entry);
   positionRadar(entry);
-  if (!slop || settings.theme !== 'stamp') { entry.stamp?.destroy(); entry.stamp = undefined; }
+  if (!slop || settings.theme !== 'stamp') {
+    entry.stamp?.destroy();
+    entry.stamp = undefined;
+  }
   const collapsed = !!slop && settings.theme === 'hide' && !entry.revealed;
   entry.host.toggleAttribute('data-collapsed', collapsed);
   entry.reveal.hidden = !slop || settings.theme !== 'hide';
   entry.reveal.textContent = entry.revealed ? 'Hide post' : '';
   if (!entry.revealed) {
     const text = document.createElement('span');
-    for (const [name, value] of [['what', 'Slop detected'], ['sep', ' - '], ['act', 'Show post']]) { const part = document.createElement('span'); part.className = name; part.textContent = value; text.append(part); }
+    for (const [name, value] of [
+      ['what', 'Slop detected'],
+      ['sep', ' - '],
+      ['act', 'Show post'],
+    ] as const) {
+      const part = document.createElement('span');
+      part.className = name;
+      part.textContent = value;
+      text.append(part);
+    }
     entry.reveal.append(text);
   }
   if (collapsed && settings.showScore) {
-    const score = document.createElement('span'); score.className = 'score'; score.textContent = `${Math.round(entry.verdict!.probability * 100)}%`;
+    const score = document.createElement('span');
+    score.className = 'score';
+    score.textContent = `${Math.round(entry.verdict!.probability * 100)}%`;
     entry.reveal.append(score);
   }
   entry.reveal.setAttribute('aria-expanded', String(entry.revealed));
@@ -164,9 +263,17 @@ function effects(entry: Entry) {
     // the reveal button intact. Never remove the site's DOM or interaction state.
     const conceal = (parent: HTMLElement) => {
       for (const node of Array.from(parent.children)) {
-        if (!(node instanceof HTMLElement) || node === entry.host || node.matches('[data-jev-target], jev-slop-stamp, style, script')) continue;
+        if (
+          !(node instanceof HTMLElement) ||
+          node === entry.host ||
+          node.matches('[data-jev-target], jev-slop-stamp, style, script')
+        )
+          continue;
         if (node.contains(entry.host) || node.querySelector('[data-jev-target]')) conceal(node);
-        else { node.setAttribute('data-jev-concealed', 'true'); entry.concealed.push(node); }
+        else {
+          node.setAttribute('data-jev-concealed', 'true');
+          entry.concealed.push(node);
+        }
       }
     };
     conceal(entry.article);
@@ -185,62 +292,155 @@ function label(entry: Entry, text: string, tone = 'neutral', detail = '', score?
   }
   if (tone === 'clean') {
     const check = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    check.setAttribute('class', 'check'); check.setAttribute('viewBox', '0 0 14 14'); check.setAttribute('aria-hidden', 'true'); check.setAttribute('focusable', 'false');
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('d', 'M2.5 7 5.5 10 11.5 4');
-    check.append(path); entry.button.append(check);
+    check.setAttribute('class', 'check');
+    check.setAttribute('viewBox', '0 0 14 14');
+    check.setAttribute('aria-hidden', 'true');
+    check.setAttribute('focusable', 'false');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M2.5 7 5.5 10 11.5 4');
+    check.append(path);
+    entry.button.append(check);
   }
-  const title = document.createElement('span'); title.className = 'label-text'; title.textContent = text;
+  const title = document.createElement('span');
+  title.className = 'label-text';
+  title.textContent = text;
   entry.button.append(title);
-  if (score !== undefined && settings.showScore) { const s = document.createElement('span'); s.className = 'score'; s.textContent = `${Math.round(score * 100)}%`; entry.button.append(s); }
-  entry.button.setAttribute('aria-label', `${text}${score !== undefined && settings.showScore ? `, ${Math.round(score * 100)} percent confidence` : ''}${tone === 'pending' ? '' : tone === 'error' ? '. Retry this post.' : '. Open Slop Detector settings.'}`);
+  if (score !== undefined && settings.showScore) {
+    const s = document.createElement('span');
+    s.className = 'score';
+    s.textContent = `${Math.round(score * 100)}%`;
+    entry.button.append(s);
+  }
+  entry.button.setAttribute(
+    'aria-label',
+    `${text}${score !== undefined && settings.showScore ? `, ${Math.round(score * 100)} percent confidence` : ''}${tone === 'pending' ? '' : tone === 'error' ? '. Retry this post.' : '. Open Slop Detector settings.'}`,
+  );
   entry.button.title = detail;
   entry.host.hidden = !settings.showNotSlop && (tone === 'clean' || tone === 'pending');
   effects(entry);
 }
 function paint(entry: Entry) {
-  if (!hasReadableText(entry.post)) { entry.host.hidden = true; effects(entry); return; }
+  if (!hasReadableText(entry.post)) {
+    entry.host.hidden = true;
+    effects(entry);
+    return;
+  }
   const detectorName = settings.detector === 'gptzero' ? 'GPTZero' : 'Jev';
-  if (!settings.enabled) { label(entry, 'Detector paused', 'paused', 'Open Slop Detector settings'); return; }
-  if (!settings.configured && settings.detector === 'gptzero') { label(entry, settings.permissionRequired ? 'Allow GPTZero access' : settings.gptzeroSource === 'personal' ? 'Connect GPTZero' : 'Enable GPTZero', 'paused', 'Open Slop Detector settings'); return; }
-  if (!settings.configured) { label(entry, settings.permissionRequired ? 'Allow provider access' : 'Connect Jev', 'neutral', 'Open Slop Detector settings'); return; }
+  if (!settings.enabled) {
+    label(entry, 'Detector paused', 'paused', 'Open Slop Detector settings');
+    return;
+  }
+  if (!settings.configured && settings.detector === 'gptzero') {
+    label(
+      entry,
+      settings.permissionRequired
+        ? 'Allow GPTZero access'
+        : settings.gptzeroSource === 'personal'
+          ? 'Connect GPTZero'
+          : 'Enable GPTZero',
+      'paused',
+      'Open Slop Detector settings',
+    );
+    return;
+  }
+  if (!settings.configured) {
+    label(
+      entry,
+      settings.permissionRequired ? 'Allow provider access' : 'Connect Jev',
+      'neutral',
+      'Open Slop Detector settings',
+    );
+    return;
+  }
   if (entry.verdict) {
     const v = entry.verdict;
     const slop = isSlopVerdict(v, settings.threshold);
     const text = slop ? 'Slop' : 'Not slop';
     const confidence = slop ? v.probability : 1 - v.probability;
     label(entry, text, slop ? 'slop' : 'clean', 'Open Slop Detector settings', confidence);
-
   } else if (entry.state === 'unrated') {
     label(entry, 'Unrated', 'neutral', entry.error || 'Unable to rate this text');
   } else if (entry.state === 'error') {
-    label(entry, entry.quota ? 'Free limit reached' : 'Couldn’t rate · retry', entry.quota ? 'paused' : 'error', entry.error || 'Retry this post');
+    label(
+      entry,
+      entry.quota ? 'Free limit reached' : 'Couldn’t rate · retry',
+      entry.quota ? 'paused' : 'error',
+      entry.error || 'Retry this post',
+    );
   } else {
-    label(entry, entry.state === 'pending' ? `Checking with ${detectorName}` : `Queued for ${detectorName}`, 'pending', entry.state === 'pending' ? `Checking with ${detectorName}` : 'Queued');
+    label(
+      entry,
+      entry.state === 'pending' ? `Checking with ${detectorName}` : `Queued for ${detectorName}`,
+      'pending',
+      entry.state === 'pending' ? `Checking with ${detectorName}` : 'Queued',
+    );
   }
 }
 function makeEntry(article: HTMLElement, post: Post): Entry {
   // A site may clone/recycle markup without cloning the associated shadow roots.
-  article.querySelectorAll('jev-slop-label, jev-slop-stamp').forEach(node => { if (ownsNode(article, node)) node.remove(); });
+  article.querySelectorAll('jev-slop-label, jev-slop-stamp').forEach((node) => {
+    if (ownsNode(article, node)) node.remove();
+  });
   article.setAttribute('data-jev-target', 'true');
   article.removeAttribute('data-jev-collapsed');
-  article.querySelectorAll('[data-jev-concealed]').forEach(node => { if (node.closest('[data-jev-target]') === article) node.removeAttribute('data-jev-concealed'); });
+  article.querySelectorAll('[data-jev-concealed]').forEach((node) => {
+    if (node.closest('[data-jev-target]') === article) node.removeAttribute('data-jev-concealed');
+  });
   clearDim(article);
   article.removeAttribute('data-jev-stamped');
   article.removeAttribute('data-jev-stamp-position');
-  for (const node of [article, ...article.querySelectorAll<HTMLElement>('[data-jev-radar-anchor]')]) {
-    if (ownsNode(article, node) && !radarAnchors.has(node)) node.removeAttribute('data-jev-radar-anchor');
+  for (const node of [
+    article,
+    ...article.querySelectorAll<HTMLElement>('[data-jev-radar-anchor]'),
+  ]) {
+    if (ownsNode(article, node) && !radarAnchors.has(node))
+      node.removeAttribute('data-jev-radar-anchor');
   }
   const host = document.createElement('jev-slop-label');
   const shadow = host.attachShadow({ mode: 'open' });
-  const style = document.createElement('style'); style.textContent = CSS;
-  const button = document.createElement('button'); button.type = 'button'; button.className = 'badge';
-  const reveal = document.createElement('button'); reveal.type = 'button'; reveal.className = 'reveal'; reveal.hidden = true;
+  const style = document.createElement('style');
+  style.textContent = CSS;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'badge';
+  const reveal = document.createElement('button');
+  reveal.type = 'button';
+  reveal.className = 'reveal';
+  reveal.hidden = true;
   shadow.append(style, button, reveal);
-  const entry: Entry = { article, host, button, post, fingerprint: `${post.id}:${postContentKey(post, settings)}`, visible: false, visibleSince: 0, state: 'idle', attempts: 0, nextTry: 0, token: 0, concealed: [], revealed: false, reveal };
-  reveal.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); entry.revealed = !entry.revealed; effects(entry); });
-  button.addEventListener('click', event => {
-    event.preventDefault(); event.stopPropagation();
-    if (button.dataset.tone === 'error') { entry.state = 'idle'; entry.attempts = 0; entry.nextTry = 0; paint(entry); pump(); return; }
+  const entry: Entry = {
+    article,
+    host,
+    button,
+    post,
+    fingerprint: `${post.id}:${postContentKey(post, settings)}`,
+    visible: false,
+    visibleSince: 0,
+    state: 'idle',
+    attempts: 0,
+    nextTry: 0,
+    token: 0,
+    concealed: [],
+    revealed: false,
+    reveal,
+  };
+  reveal.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    entry.revealed = !entry.revealed;
+    effects(entry);
+  });
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (button.dataset.tone === 'error') {
+      entry.state = 'idle';
+      entry.attempts = 0;
+      entry.nextTry = 0;
+      paint(entry);
+      pump();
+      return;
+    }
     void chrome.runtime.sendMessage({ type: 'openSettings' }).catch(() => {
       button.title = 'Reload this page';
     });
@@ -251,30 +451,43 @@ function makeEntry(article: HTMLElement, post: Post): Entry {
 }
 function placeHost(entry: Entry) {
   const text = labelAnchor(entry.article);
-  const header = Array.from(entry.article.querySelectorAll<HTMLElement>('[data-testid="User-Name"]')).find(node => ownsNode(entry.article, node));
+  const header = Array.from(
+    entry.article.querySelectorAll<HTMLElement>('[data-testid="User-Name"]'),
+  ).find((node) => ownsNode(entry.article, node));
   if (text?.parentElement) text.insertAdjacentElement('afterend', entry.host);
   else if (header) {
-    const anchor = header.parentElement && header.parentElement !== entry.article ? header.parentElement : header;
+    const anchor =
+      header.parentElement && header.parentElement !== entry.article
+        ? header.parentElement
+        : header;
     anchor.insertAdjacentElement('afterend', entry.host);
-  }
-  else entry.article.append(entry.host);
+  } else entry.article.append(entry.host);
   alignLabel(entry);
 }
 function updateVisibility(changes: IntersectionObserverEntry[]) {
   for (const change of changes) {
     const entry = visibilityTargets.get(change.target);
     if (!entry) continue;
-    const visible = change.isIntersecting && change.intersectionRect.width > 0 && change.intersectionRect.height > 0;
+    const visible =
+      change.isIntersecting &&
+      change.intersectionRect.width > 0 &&
+      change.intersectionRect.height > 0;
     if (!visible || !entry.visible) entry.visibleSince = 0;
     entry.visible = visible;
   }
 }
-const intersection = new IntersectionObserver(changes => {
-  updateVisibility(changes);
-  pump();
-}, { rootMargin: '0px', threshold: 0 });
+const intersection = new IntersectionObserver(
+  (changes) => {
+    updateVisibility(changes);
+    pump();
+  },
+  { rootMargin: '0px', threshold: 0 },
+);
 function unwatchVisibility(entry: Entry) {
-  if (entry.visibilityTarget) { intersection.unobserve(entry.visibilityTarget); visibilityTargets.delete(entry.visibilityTarget); }
+  if (entry.visibilityTarget) {
+    intersection.unobserve(entry.visibilityTarget);
+    visibilityTargets.delete(entry.visibilityTarget);
+  }
   entry.visibilityTarget = undefined;
   entry.visible = false;
   entry.visibleSince = 0;
@@ -293,16 +506,24 @@ function inView(entry: Entry): boolean {
   if (document.hidden || !target?.isConnected || !entry.article.isConnected) return false;
   // Observer callbacks arrive asynchronously. Recheck the current position before dispatch.
   const rect = target.getBoundingClientRect();
-  let left = Math.max(0, rect.left), top = Math.max(0, rect.top);
-  let right = Math.min(document.documentElement.clientWidth, rect.right), bottom = Math.min(document.documentElement.clientHeight, rect.bottom);
-  for (let node: HTMLElement | null = target; node && right > left && bottom > top; node = node.parentElement) {
+  let left = Math.max(0, rect.left),
+    top = Math.max(0, rect.top);
+  let right = Math.min(document.documentElement.clientWidth, rect.right),
+    bottom = Math.min(document.documentElement.clientHeight, rect.bottom);
+  for (
+    let node: HTMLElement | null = target;
+    node && right > left && bottom > top;
+    node = node.parentElement
+  ) {
     const css = getComputedStyle(node);
-    if (css.visibility !== 'visible' || css.display === 'none' || Number(css.opacity) === 0) return false;
+    if (css.visibility !== 'visible' || css.display === 'none' || Number(css.opacity) === 0)
+      return false;
     // The document root clips to the viewport (already applied above), not
     // its clientHeight at a page-scrolled bounding rect. Body overflow also
     // propagates to the viewport when the root has its default overflow.
     // display:contents has no box and cannot clip its children.
-    if (node === target || node === document.documentElement || css.display === 'contents') continue;
+    if (node === target || node === document.documentElement || css.display === 'contents')
+      continue;
     if (node === document.body) {
       const root = getComputedStyle(document.documentElement);
       if (root.overflowX === 'visible' && root.overflowY === 'visible') continue;
@@ -311,14 +532,24 @@ function inView(entry: Entry): boolean {
     const clipY = /^(auto|scroll|hidden|clip)$/.test(css.overflowY);
     if (!clipX && !clipY) continue;
     const bounds = node.getBoundingClientRect();
-    if (clipX) { left = Math.max(left, bounds.left + node.clientLeft); right = Math.min(right, bounds.left + node.clientLeft + node.clientWidth); }
-    if (clipY) { top = Math.max(top, bounds.top + node.clientTop); bottom = Math.min(bottom, bounds.top + node.clientTop + node.clientHeight); }
+    if (clipX) {
+      left = Math.max(left, bounds.left + node.clientLeft);
+      right = Math.min(right, bounds.left + node.clientLeft + node.clientWidth);
+    }
+    if (clipY) {
+      top = Math.max(top, bounds.top + node.clientTop);
+      bottom = Math.min(bottom, bounds.top + node.clientTop + node.clientHeight);
+    }
   }
   return right > left && bottom > top;
 }
 function viewportChanged() {
   if (!alive || viewportFrame) return;
-  viewportFrame = requestAnimationFrame(() => { viewportFrame = 0; for (const entry of entries.values()) positionRadar(entry); pump(); });
+  viewportFrame = requestAnimationFrame(() => {
+    viewportFrame = 0;
+    for (const entry of entries.values()) positionRadar(entry);
+    pump();
+  });
 }
 
 function scan() {
@@ -326,55 +557,142 @@ function scan() {
   if (!alive) return;
   const targets = findPosts();
   const current = new Set(targets);
-  for (const [article, entry] of entries) if (!current.has(article)) {
-    alignmentResize.unobserve(article);
-    unwatchVisibility(entry); releaseRadarAnchor(entry); entry.host.remove(); entry.stamp?.destroy(); clearConcealed(entry); clearDim(article); article.removeAttribute('data-jev-target'); entry.token++; entries.delete(article);
-  }
+  for (const [article, entry] of entries)
+    if (!current.has(article)) {
+      alignmentResize.unobserve(article);
+      unwatchVisibility(entry);
+      releaseRadarAnchor(entry);
+      entry.host.remove();
+      entry.stamp?.destroy();
+      clearConcealed(entry);
+      clearDim(article);
+      article.removeAttribute('data-jev-target');
+      entry.token++;
+      entries.delete(article);
+    }
   for (const article of targets) {
     const post = extractPost(article);
     const previous = entries.get(article);
     if (!post) {
       alignmentResize.unobserve(article);
-      if (previous) { previous.token++; releaseRadarAnchor(previous); previous.host.remove(); previous.stamp?.destroy(); clearConcealed(previous); clearDim(article); article.removeAttribute('data-jev-target'); unwatchVisibility(previous); entries.delete(article); }
+      if (previous) {
+        previous.token++;
+        releaseRadarAnchor(previous);
+        previous.host.remove();
+        previous.stamp?.destroy();
+        clearConcealed(previous);
+        clearDim(article);
+        article.removeAttribute('data-jev-target');
+        unwatchVisibility(previous);
+        entries.delete(article);
+      }
       continue;
     }
     const fingerprint = `${post.id}:${postContentKey(post, settings)}`;
-    if (!previous) { const entry = makeEntry(article, post); entries.set(article, entry); alignmentResize.observe(article); }
-    else if (previous.fingerprint !== fingerprint) {
+    if (!previous) {
+      const entry = makeEntry(article, post);
+      entries.set(article, entry);
+      alignmentResize.observe(article);
+    } else if (previous.fingerprint !== fingerprint) {
       previous.token++;
-      Object.assign(previous, { post, fingerprint, state: 'idle', attempts: 0, nextTry: 0, verdict: undefined, error: undefined, quota: false, revealed: false, visibleSince: 0 });
+      Object.assign(previous, {
+        post,
+        fingerprint,
+        state: 'idle',
+        attempts: 0,
+        nextTry: 0,
+        verdict: undefined,
+        error: undefined,
+        quota: false,
+        revealed: false,
+        visibleSince: 0,
+      });
       if (!previous.host.isConnected) placeHost(previous);
       paint(previous);
-    } else if (!previous.host.isConnected) { placeHost(previous); paint(previous); }
-
+    } else if (!previous.host.isConnected) {
+      placeHost(previous);
+      paint(previous);
+    }
   }
-  for (const entry of entries.values()) { effects(entry); watchVisibility(entry); entry.stamp?.refresh(); }
+  for (const entry of entries.values()) {
+    effects(entry);
+    watchVisibility(entry);
+    entry.stamp?.refresh();
+  }
   pump();
 }
-function scheduleScan() { if (!scanTimer) scanTimer = setTimeout(scan, 120); }
-const mutations = new MutationObserver(records => {
-  if (records.some(record => {
-    const element = record.target instanceof Element ? record.target : record.target.parentElement;
-    if (element?.closest('jev-slop-label, jev-slop-stamp')) return false;
-    return record.type === 'characterData' || record.type === 'attributes' || [...record.addedNodes, ...record.removedNodes].some(node => !(node instanceof Element && ['JEV-SLOP-LABEL', 'JEV-SLOP-STAMP'].includes(node.tagName)));
-  })) scheduleScan();
+function scheduleScan() {
+  if (!scanTimer) scanTimer = setTimeout(scan, 120);
+}
+const mutations = new MutationObserver((records) => {
+  if (
+    records.some((record) => {
+      const element =
+        record.target instanceof Element ? record.target : record.target.parentElement;
+      if (element?.closest('jev-slop-label, jev-slop-stamp')) return false;
+      return (
+        record.type === 'characterData' ||
+        record.type === 'attributes' ||
+        [...record.addedNodes, ...record.removedNodes].some(
+          (node) =>
+            !(
+              node instanceof Element && ['JEV-SLOP-LABEL', 'JEV-SLOP-STAMP'].includes(node.tagName)
+            ),
+        )
+      );
+    })
+  )
+    scheduleScan();
 });
-mutations.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['href', 'id', 'data-testid', 'data-urn', 'data-id', 'componentkey', 'data-view-name', 'contenteditable'] });
+mutations.observe(document.body, {
+  childList: true,
+  subtree: true,
+  characterData: true,
+  attributes: true,
+  attributeFilter: [
+    'href',
+    'id',
+    'data-testid',
+    'data-urn',
+    'data-id',
+    'componentkey',
+    'data-view-name',
+    'contenteditable',
+  ],
+});
 
-function schedulePump(delay: number) { if (pumpTimer) clearTimeout(pumpTimer); pumpTimer = setTimeout(() => { pumpTimer = undefined; pump(); }, Math.min(2147483647, Math.max(100, delay))); }
+function schedulePump(delay: number) {
+  if (pumpTimer) clearTimeout(pumpTimer);
+  pumpTimer = setTimeout(
+    () => {
+      pumpTimer = undefined;
+      pump();
+    },
+    Math.min(2147483647, Math.max(100, delay)),
+  );
+}
 function pump() {
   if (!alive || !settings.enabled || !settings.configured || document.hidden) return;
   updateVisibility(intersection.takeRecords());
   let nextDelay = Infinity;
   for (const entry of entries.values()) {
     if (entry.verdict || entry.state === 'unrated' || !hasReadableText(entry.post)) continue;
-    if (!inView(entry)) { entry.visibleSince = 0; continue; }
+    if (!inView(entry)) {
+      entry.visibleSince = 0;
+      continue;
+    }
     if (!entry.visibleSince) entry.visibleSince = Date.now();
     if (entry.state === 'pending') continue;
     if (entry.state === 'error' && entry.attempts >= 3) continue;
-    if (entry.nextTry > Date.now()) { nextDelay = Math.min(nextDelay, entry.nextTry - Date.now()); continue; }
+    if (entry.nextTry > Date.now()) {
+      nextDelay = Math.min(nextDelay, entry.nextTry - Date.now());
+      continue;
+    }
     const settleDelay = VISIBLE_DELAY - (Date.now() - entry.visibleSince);
-    if (settleDelay > 0) { nextDelay = Math.min(nextDelay, settleDelay); continue; }
+    if (settleDelay > 0) {
+      nextDelay = Math.min(nextDelay, settleDelay);
+      continue;
+    }
     if (running >= 3) continue;
     void run(entry);
   }
@@ -387,37 +705,85 @@ async function run(entry: Entry) {
   running++;
   paint(entry);
   try {
-    if (!inView(entry)) { entry.state = 'idle'; entry.visibleSince = 0; return; }
-    const result: Classification = await chrome.runtime.sendMessage({ type: 'classify', post: entry.post });
+    if (!inView(entry)) {
+      entry.state = 'idle';
+      entry.visibleSince = 0;
+      return;
+    }
+    const result: Classification = await chrome.runtime.sendMessage({
+      type: 'classify',
+      post: entry.post,
+    });
     if (entry.token !== token || !entry.article.isConnected) return;
-    if (result.status === 'ok') { entry.verdict = result.verdict; entry.state = 'done'; }
-    else if (result.status === 'busy') { entry.state = 'idle'; entry.nextTry = Date.now() + result.retryAfter + Math.random() * 300; }
-    else if (result.status === 'error') {
-      entry.state = 'error'; entry.error = result.message; entry.quota = result.code === 'quota'; entry.attempts = entry.quota ? 0 : entry.attempts + 1;
+    if (result.status === 'ok') {
+      entry.verdict = result.verdict;
+      entry.state = 'done';
+    } else if (result.status === 'busy') {
+      entry.state = 'idle';
+      entry.nextTry = Date.now() + result.retryAfter + Math.random() * 300;
+    } else if (result.status === 'error') {
+      entry.state = 'error';
+      entry.error = result.message;
+      entry.quota = result.code === 'quota';
+      entry.attempts = entry.quota ? 0 : entry.attempts + 1;
       if (!result.retryAfter) entry.attempts = 3;
       entry.nextTry = Date.now() + (result.retryAfter ?? 60_000);
-    } else if (result.status === 'unrated') { entry.state = 'unrated'; entry.error = result.message; }
-    else if (result.status === 'setup') { settings.configured = false; entry.state = 'idle'; }
-    else if (result.status === 'paused') { settings.enabled = false; entry.state = 'idle'; }
-    else if (result.status === 'empty') { entry.state = 'done'; entry.attempts = 3; }
-    else throw new Error('Unexpected extension response');
+    } else if (result.status === 'unrated') {
+      entry.state = 'unrated';
+      entry.error = result.message;
+    } else if (result.status === 'setup') {
+      settings.configured = false;
+      entry.state = 'idle';
+    } else if (result.status === 'paused') {
+      settings.enabled = false;
+      entry.state = 'idle';
+    } else if (result.status === 'empty') {
+      entry.state = 'done';
+      entry.attempts = 3;
+    } else throw new Error('Unexpected extension response');
   } catch (error) {
     if (entry.token !== token) return;
-    entry.state = 'error'; entry.attempts++;
+    entry.state = 'error';
+    entry.attempts++;
     entry.error = 'The extension was reloaded or disconnected. Refresh this tab.';
     entry.nextTry = Date.now() + 30_000;
-    if (String(error).includes('Extension context invalidated')) { alive = false; mutations.disconnect(); intersection.disconnect(); alignmentResize.disconnect(); }
-  } finally { running--; if (entry.token === token) paint(entry); pump(); }
+    if (String(error).includes('Extension context invalidated')) {
+      alive = false;
+      mutations.disconnect();
+      intersection.disconnect();
+      alignmentResize.disconnect();
+    }
+  } finally {
+    running--;
+    if (entry.token === token) paint(entry);
+    pump();
+  }
 }
-chrome.runtime.onMessage.addListener(message => {
+chrome.runtime.onMessage.addListener((message) => {
   if (message.type !== 'settingsChanged') return;
   const wasEnabled = settings.enabled && settings.configured;
-  const reevaluate = detectionChanged(settings, message.settings) || settings.cacheEpoch !== message.settings.cacheEpoch;
+  const reevaluate =
+    detectionChanged(settings, message.settings) ||
+    settings.cacheEpoch !== message.settings.cacheEpoch;
   settings = message.settings;
   for (const entry of entries.values()) {
-    if (reevaluate) { entry.verdict = undefined; entry.revealed = false; entry.error = undefined; entry.quota = false; }
-    if (reevaluate || !settings.enabled || !settings.configured || !wasEnabled || entry.state === 'error') {
-      entry.token++; entry.state = 'idle'; entry.attempts = 0; entry.nextTry = 0;
+    if (reevaluate) {
+      entry.verdict = undefined;
+      entry.revealed = false;
+      entry.error = undefined;
+      entry.quota = false;
+    }
+    if (
+      reevaluate ||
+      !settings.enabled ||
+      !settings.configured ||
+      !wasEnabled ||
+      entry.state === 'error'
+    ) {
+      entry.token++;
+      entry.state = 'idle';
+      entry.attempts = 0;
+      entry.nextTry = 0;
     }
     paint(entry);
   }
@@ -425,13 +791,38 @@ chrome.runtime.onMessage.addListener(message => {
 });
 document.addEventListener('visibilitychange', () => {
   for (const entry of entries.values()) entry.visibleSince = 0;
-  if (pumpTimer) { clearTimeout(pumpTimer); pumpTimer = undefined; }
+  if (pumpTimer) {
+    clearTimeout(pumpTimer);
+    pumpTimer = undefined;
+  }
   if (!document.hidden) scan();
 });
 document.addEventListener('scroll', viewportChanged, { capture: true, passive: true });
 window.addEventListener('resize', viewportChanged, { passive: true });
-window.addEventListener('resize', () => { if (alive) for (const entry of entries.values()) alignLabel(entry); });
-window.addEventListener('online', () => { for (const e of entries.values()) if (e.state === 'error') { e.attempts = 0; e.nextTry = 0; } pump(); });
-void chrome.runtime.sendMessage({ type: 'getSettings' }).then(value => { settings = value; scan(); }).catch(() => { alive = false; mutations.disconnect(); intersection.disconnect(); alignmentResize.disconnect(); });
+window.addEventListener('resize', () => {
+  if (alive) for (const entry of entries.values()) alignLabel(entry);
+});
+window.addEventListener('online', () => {
+  for (const e of entries.values())
+    if (e.state === 'error') {
+      e.attempts = 0;
+      e.nextTry = 0;
+    }
+  pump();
+});
+void chrome.runtime
+  .sendMessage({ type: 'getSettings' })
+  .then((value) => {
+    settings = value;
+    scan();
+  })
+  .catch(() => {
+    alive = false;
+    mutations.disconnect();
+    intersection.disconnect();
+    alignmentResize.disconnect();
+  });
 
-void fontReady.then(() => { for (const entry of entries.values()) entry.stamp?.refresh(); });
+void fontReady.then(() => {
+  for (const entry of entries.values()) entry.stamp?.refresh();
+});
