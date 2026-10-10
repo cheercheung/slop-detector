@@ -17,7 +17,7 @@ npm run check
 
 This runs lint, type checks, tests and a build.
 
-Load `dist/` at `chrome://extensions` with Developer mode enabled. Free GPTZero scanning needs a [Cloudflare proxy](CLOUDFLARE_SETUP.md). Personal keys work without one.
+Load `dist/` at `chrome://extensions` with Developer mode enabled. Free GPTZero scanning needs a [Cloudflare proxy](CLOUDFLARE_SETUP.md). Personal keys call GPTZero directly.
 
 - `npm run test:watch` — run tests while editing.
 - `npm run lint:fix` — format code and fix lint errors.
