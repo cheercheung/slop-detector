@@ -2,7 +2,7 @@
 
 Use the Node version in `.nvmrc`, then run `npm ci`.
 
-Keep pull requests focused. Include a regression test for bug fixes and screenshots for UI changes. Use mock API responses and fictional posts in tests and screenshots. Keep keys and local deployment config out of commits.
+Try to keep each pull request focused on one change, with a test if you’re fixing a bug or a screenshot if you’re changing the UI. Please use mock API responses in tests and fictional posts in screenshots, and leave API keys and local deployment settings out of your commits.
 
 Before opening a pull request:
 
