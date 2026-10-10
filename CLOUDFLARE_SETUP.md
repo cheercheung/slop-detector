@@ -1,6 +1,6 @@
 # Set up the GPTZero proxy
 
-The proxy keeps the shared GPTZero key on Cloudflare and tracks the free allowance. Personal API keys don't need it.
+The proxy keeps the shared GPTZero key on Cloudflare and tracks the free allowance.
 
 ## Create the config
 
@@ -42,8 +42,6 @@ npx wrangler secret put GPTZERO_API_KEY --config proxy/wrangler.jsonc
 openssl rand -hex 32 | npx wrangler secret put HASH_SECRET --config proxy/wrangler.jsonc
 ```
 
-Enter your GPTZero key when prompted. The last command creates a hashing secret. Keep both secrets out of source files. The local Wrangler config is ignored by Git.
-
 ## Connect the extension
 
 Use the URL from the deployment:
@@ -70,4 +68,4 @@ Run `npm run proxy:deploy` again. Open the extension and click **Allow GPTZero a
 
 Set a spending cap with GPTZero or agree to no overage charges. The proxy's quotas don't cap Cloudflare hosting costs, and installation IDs and origin headers can be spoofed.
 
-Run `npm run test:proxy` to test the Worker locally with mock GPTZero responses.
+Run `npm run test:proxy` to test the Worker locally.

@@ -1,8 +1,8 @@
 # Contributing
 
-Use the Node version in `.nvmrc`, then run `npm ci`.
+Use the Node version in `.nvmrc` and install dependencies with `npm ci`. The full test suite also needs `openssl` and `zip`.
 
-Try to keep each pull request focused on one change, with a test if you’re fixing a bug or a screenshot if you’re changing the UI. Please use mock API responses in tests and fictional posts in screenshots, and leave API keys and local deployment settings out of your commits.
+Try to keep each pull request focused on one change, with a test if you’re fixing a bug or a screenshot if you’re changing the UI.
 
 Before opening a pull request:
 
@@ -10,8 +10,6 @@ Before opening a pull request:
 npx playwright install chromium
 npm run check:all
 ```
-
-This includes lint, types, unit tests, browser tests and local Worker tests. You'll also need `openssl` and `zip`. Tests don't call paid APIs.
 
 ## Releasing
 

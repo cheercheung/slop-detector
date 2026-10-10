@@ -15,7 +15,7 @@ npm ci
 npm run check
 ```
 
-This runs lint, type checks, tests and a build. Tests use mock APIs; no keys are needed.
+This runs lint, type checks, tests and a build.
 
 Load `dist/` at `chrome://extensions` with Developer mode enabled. Free GPTZero scanning needs a [Cloudflare proxy](CLOUDFLARE_SETUP.md). Personal keys work without one.
 

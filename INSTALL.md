@@ -14,7 +14,7 @@ npm run build
 3. Pin Slop Detector and open its popup.
 4. Connect a detector, then refresh X or LinkedIn.
 
-If you're using `slop-detector.zip`, unzip it and load that folder instead. Keep the folder in place.
+If you're using `slop-detector.zip`, unzip it and load that folder instead.
 
 ## Choose a detector
 
@@ -22,13 +22,13 @@ If you're using `slop-detector.zip`, unzip it and load that folder instead. Keep
 
 For free scanning, click **Allow GPTZero access** and approve Chrome's prompt. Builds from this repository need a [configured proxy](CLOUDFLARE_SETUP.md) to offer the free allowance.
 
-To use your own credits, choose **Access → Your API key**, enter a [GPTZero key](https://app.gptzero.me/app/api) and click **Connect**. Requests go directly to GPTZero. Connecting uses a short sample to check the key. Free scanning never switches to your key automatically.
+To use your own credits, choose **Access → Your API key**, enter a [GPTZero key](https://app.gptzero.me/app/api) and click **Connect**.
 
 GPTZero flags posts classified as AI that meet your threshold. Mixed, AI-polished and human results aren't flagged.
 
 ### Jev
 
-Select **Jev**, choose a provider, enter a key and click **Connect**. Approve access when Chrome asks. The connection check uses a small amount of your API credits.
+Select **Jev**, choose a provider, enter a key and click **Connect**, then approve access when Chrome asks.
 
 | Provider | Get a key |
 | --- | --- |
@@ -47,11 +47,11 @@ Under **Prompt**, enter your question and click **Save prompt**. A “yes” mea
 
 Use the top switch to pause scanning. Click a result label to open settings. **Clear cache** rechecks visible items.
 
-Only post, comment and reply text is checked, up to 6,000 characters per item. Images and videos aren't analysed. Scores are estimates, not proof of AI authorship. See [Privacy](PRIVACY.md) for storage and data use.
+Only post, comment and reply text is checked, up to 6,000 characters per item. Images and videos aren't analysed. See [Privacy](PRIVACY.md) for storage and data use.
 
 ## Updates and troubleshooting
 
-For unpacked installs, rebuild or replace the files, click **Reload** at `chrome://extensions`, then refresh your feed. Store installs update through Chrome.
+For unpacked installs, rebuild or replace the files, click **Reload** at `chrome://extensions`, then refresh your feed.
 
 - **No results:** check the top switch, site access and **Show not-slop** setting.
 - **Access needed:** open the popup and approve the requested permission.

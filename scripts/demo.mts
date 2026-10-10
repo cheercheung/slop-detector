@@ -99,8 +99,4 @@ server.on('error', (error) => {
   console.error(error.message);
   process.exitCode = 1;
 });
-server.listen(4173, '127.0.0.1', () =>
-  console.log(
-    'Staged feed ready: http://127.0.0.1:4173\nFictional content, preset scores, no API calls. Ctrl+C to stop.',
-  ),
-);
+server.listen(4173, '127.0.0.1', () => console.log('Demo ready: http://127.0.0.1:4173'));
