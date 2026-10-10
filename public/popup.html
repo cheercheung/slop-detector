@@ -22,6 +22,7 @@
       <div class="usage"><p id="gptzero-usage" class="quota" hidden></p><p id="gptzero-reset" class="help" hidden></p></div>
       <div id="gptzero-meter" class="meter" hidden><span></span></div>
       <div class="row"><label for="gptzero-source">Access</label><select id="gptzero-source"><option value="free">Free</option><option value="personal">Your API key</option></select></div>
+      <button id="gptzero-access" class="access-button" type="button" hidden>Allow GPTZero access</button>
       <details id="gptzero-connection" hidden>
         <summary><span>API key</span><span id="gptzero-key-status" class="meta">Add key</span></summary>
         <form id="gptzero-key-form">
@@ -45,7 +46,7 @@
         </form>
       </details>
     </section>
-    <section aria-labelledby="appearance-title">
+    <section id="appearance-section" class="setup-dependent" data-setup-pending="true" inert aria-labelledby="appearance-title">
       <h2 id="appearance-title">Appearance</h2>
       <div class="row"><label for="theme">On slop</label><select id="theme"><option value="stamp">Stamp</option><option value="fade">Fade out</option><option value="hide" selected>Hide</option></select></div>
       <label class="row" for="show-not-slop"><span>Show not-slop</span><input id="show-not-slop" type="checkbox" checked></label>
@@ -62,7 +63,7 @@
       </form>
     </details>
     <p id="message" class="message" role="status" aria-live="polite" hidden></p>
-    <footer><a id="attribution" href="https://gptzero.me/" target="_blank" rel="noreferrer">Powered by GPTZero</a><button id="clear-cache" class="text-button" type="button">Clear cache</button></footer>
+    <footer id="popup-footer" class="setup-dependent" data-setup-pending="true" inert><a id="attribution" href="https://gptzero.me/" target="_blank" rel="noreferrer">Powered by GPTZero</a><button id="clear-cache" class="text-button" type="button">Clear cache</button></footer>
   </main>
 </body>
 </html>

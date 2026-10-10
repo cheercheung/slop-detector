@@ -1,6 +1,6 @@
 # Slop Detector
 
-Chrome extension for X and LinkedIn posts, comments and replies. Version **2.1.2** offers sponsored GPTZero detection through a Cloudflare Worker, or a personal GPTZero key that calls its API directly. Users can explicitly switch to their own key when the free allowance runs out. GPTZero flags only AI-classified text above the chosen threshold; Mixed/AI-polished results are excluded. Jev keeps the editable prompt and AI Gateway, OpenRouter and direct TypeSafe key options.
+Chrome extension for X and LinkedIn posts, comments and replies. Version **2.1.3** offers sponsored GPTZero detection through a Cloudflare Worker, or a personal GPTZero key that calls its API directly. Users can explicitly switch to their own key when the free allowance runs out. GPTZero flags only AI-classified text above the chosen threshold; Mixed/AI-polished results are excluded. Jev keeps the editable prompt and AI Gateway, OpenRouter and direct TypeSafe key options.
 
 - [Set up the Cloudflare proxy](CLOUDFLARE_SETUP.md)
 - [Install or update the extension](INSTALL.md)

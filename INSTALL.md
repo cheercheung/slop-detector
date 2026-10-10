@@ -1,15 +1,15 @@
 # Install or update Slop Detector
 
-Version **2.1.2** supports posts, comments and replies on **X and LinkedIn**.
+Version **2.1.3** supports posts, comments and replies on **X and LinkedIn**.
 
 ## Update your existing installation
 
 1. Open **chrome://extensions** in Chrome.
-2. Find **Slop Detector** and click **Reload**. The version should show **2.1.2**.
+2. Find **Slop Detector** and click **Reload**. The version should show **2.1.3**.
 3. Ensure the extension has access to X and LinkedIn. If its popup shows **Allow access**, click it to approve access to your selected API provider; your saved key is retained.
 4. Refresh your X and LinkedIn tabs.
 
-The rebuilt extension is in the same `dist` folder. Existing installs keep Jev selected and retain saved keys, prompts and settings. New installs start in GPTZero mode and require opt-in before sending text. To switch, use the GPTZero/Jev buttons in the popup. New installations default to **70%** and **Hide**; to use these on an existing installation, select them under **Appearance**. If dimming was previously enabled, it becomes **Fade out**.
+The rebuilt extension is in the same `dist` folder. Saved keys, prompts and settings are retained. New installations start with GPTZero, a **70%** threshold and **Hide**. Click **Allow GPTZero access** in the popup to finish setup. The button disappears once connected.
 
 Provider permissions are now optional. The update removes old grants for providers with no saved key and keeps access for connected providers.
 
@@ -22,7 +22,7 @@ Provider permissions are now optional. The update removes old grants for provide
 
    In the Mac folder picker, press **⌘⇧G**, paste the path, and select **dist**.
 3. Pin **Slop Detector** from Chrome’s Extensions menu.
-4. Open its popup. Choose **GPTZero** for the sponsored service, if configured in this build. Or select **Jev**, choose a provider, paste its API key, and click **Connect**. Approve access to that provider when Chrome asks. This then makes a small evaluation to verify the key before saving it. Provider charges may apply.
+4. Open its popup and click **Allow GPTZero access** for free scanning. Or select **Jev**, choose a provider, paste its API key, and click **Connect**. Approve access to that provider when Chrome asks. This then makes a small evaluation to verify the key before saving it. Provider charges may apply.
 5. Open or refresh X or LinkedIn and scroll. Open comment threads or load replies normally; each is checked independently as it appears.
 
 Keep the extension folder in place. To install from `slop-detector.zip` on another computer, unzip it to a permanent folder and load that folder. End users do not need to deploy a server. The extension publisher sets up the sponsored GPTZero proxy once using [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md). Jev and personal GPTZero keys work directly without a proxy.
@@ -31,7 +31,7 @@ Checks start only when the item's own text stays on screen for a quarter-second.
 
 ## GPTZero
 
-For free scanning, the publisher must deploy the proxy and build its public URL into the extension; see [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md). GPTZero does not need an API key from individual users. Select the **GPTZero** tab and grant permission to the proxy host. Enabling only reads your quota; it does not spend a GPTZero evaluation.
+For free scanning, the publisher must deploy the proxy and build its public URL into the extension; see [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md). GPTZero does not need an API key from individual users. Select **GPTZero**, then click **Allow GPTZero access** if shown, and approve Chrome’s permission prompt. If access is already granted but setup failed, click **Connect GPTZero** to retry. Enabling only reads your quota; it does not spend a GPTZero evaluation.
 
 The popup shows the installation's weekly allowance and reset time. Shared IP/service limits can stop new evaluations earlier. Clearing cache, pausing or switching detectors does not reset server quota. Cached scores can still be reused at the limit. To continue, select **Access → Your API key**, enter a personal [GPTZero API key](https://app.gptzero.me/app/api), and click **Connect**. Approve access to **api.gptzero.me**. The key is checked with one short sample before saving; this uses your own GPTZero credits. Visible items then go directly to GPTZero, without the sponsored proxy or its allowance. You can also choose Jev with your own key. No automatic paid fallback occurs.
 
@@ -80,6 +80,7 @@ Personal GPTZero and Jev keys and your prompt stay in trusted local extension st
 
 ## Troubleshooting
 
+- **Allow GPTZero access:** open the popup and click **Allow GPTZero access**. No detector switch is needed.
 - **Connect Jev:** add a key for the selected provider, or switch to a provider with a saved key.
 - **Allow provider access:** open the popup and click **Allow access**. Your key is already saved; approve that provider's permission to resume checks.
 - **Key check stuck on an older version:** reload the extension at **chrome://extensions** to clear the old check, then try connecting again. Updated versions show progress and a Cancel button.
@@ -89,4 +90,4 @@ Personal GPTZero and Jev keys and your prompt stay in trusted local extension st
 - **Old content still visible in Hide:** a Show post override stays until the item changes or is rechecked. Click Hide post to collapse it.
 - **Layout changes:** X and LinkedIn can change their markup; an adapter update may be needed.
 
-Automated checks use mocked provider responses. Connecting your own key performs the live API check. This package has not been published to the Chrome Web Store.
+Automated checks use mocked provider responses. Connecting your own key performs the live API check. Store users receive updates through Chrome; the steps above are for unpacked installations.

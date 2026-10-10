@@ -1,9 +1,10 @@
 {
   "name": "slop-detector",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "private": true,
   "type": "module",
   "scripts": {
+    "demo": "node scripts/demo.mjs",
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p proxy/tsconfig.json",
     "test": "node --import tsx --test tests/*.test.ts",
@@ -13,7 +14,8 @@
     "configure:proxy": "node scripts/configure-proxy.mjs",
     "proxy:login": "wrangler login",
     "proxy:dev": "wrangler dev --config proxy/wrangler.jsonc",
-    "proxy:deploy": "wrangler deploy --config proxy/wrangler.jsonc",
+    "privacy:build": "node scripts/render-privacy.mjs",
+    "proxy:deploy": "npm run privacy:build && wrangler deploy --config proxy/wrangler.jsonc",
     "test:proxy": "node tests/proxy.mjs",
     "test:gptzero": "node tests/gptzero-browser.mjs"
   },

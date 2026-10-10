@@ -31,9 +31,9 @@ button, select, summary, input[type=checkbox], input[type=range] { cursor: point
 button { border: 1px solid var(--border); background: var(--raised); padding: 6px 12px; border-radius: 8px; font-weight: 500; transition: background .12s, border-color .12s, color .12s, opacity .12s; }
 button:hover { background: var(--hover); }
 button:disabled, select:disabled { opacity: .45; cursor: wait; }
-button[type=submit] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
-button[type=submit]:hover { background: var(--ink); opacity: .86; }
-button[type=submit]:disabled { opacity: .35; }
+button[type=submit], .access-button { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+button[type=submit]:hover, .access-button:hover { background: var(--ink); opacity: .86; }
+button[type=submit]:disabled, .access-button:disabled { opacity: .35; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 a { color: inherit; text-underline-offset: 3px; }
 h1, h2, p { margin: 0; }
@@ -54,6 +54,9 @@ input[type=checkbox]:checked::after { transform: translateX(12px); background: v
 .status { color: var(--muted); font-size: 13px; line-height: 1.4; margin-bottom: 8px; }
 section { padding: 12px 0; }
 .provider-section, .gptzero-section { border-bottom: 1px solid var(--line); }
+.access-button { width: 100%; margin-top: 8px; }
+.setup-dependent { transition: opacity .18s; }
+.setup-dependent[data-setup-pending=true] { opacity: .3; }
 .provider-section details, #gptzero-connection { border: 0; margin-top: 2px; }
 .provider-section summary, #gptzero-connection summary { padding: 0; }
 .provider-section details[open] summary, #gptzero-connection[open] summary { padding-bottom: 6px; }

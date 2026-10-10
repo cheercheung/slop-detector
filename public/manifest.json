@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Slop Detector \u00b7 X & LinkedIn",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "description": "Spot AI-generated posts with GPTZero, or use Jev with your own prompt. Scores, stamps and filtering for X and LinkedIn.",
   "minimum_chrome_version": "120",
   "permissions": [

@@ -28,6 +28,7 @@ const fillThreshold = () => threshold.style.setProperty('--fill', `${(Number(thr
 const zeroKey = $<HTMLInputElement>('gptzero-key');
 const zeroConnection = $<HTMLDetailsElement>('gptzero-connection');
 const zeroSource = $<HTMLSelectElement>('gptzero-source');
+const zeroAccess = $<HTMLButtonElement>('gptzero-access');
 
 async function send<T = any>(message: unknown): Promise<T> {
   const response = await chrome.runtime.sendMessage(message);
@@ -61,6 +62,11 @@ function render() {
   $('gptzero-section').hidden = !zero;
   $('provider-section').hidden = zero;
   $('prompt-section').hidden = zero;
+  const setupPending = zero && !settings.configured;
+  for (const id of ['appearance-section', 'popup-footer']) {
+    $(id).dataset.setupPending = String(setupPending);
+    $(id).inert = setupPending;
+  }
   $('detector-gptzero').setAttribute('aria-pressed', String(zero));
   $('detector-jev').setAttribute('aria-pressed', String(!zero));
   const attribution = $<HTMLAnchorElement>('attribution');
@@ -68,6 +74,10 @@ function render() {
   attribution.href = zero ? 'https://gptzero.me/' : 'https://typesafe.ai/';
   const personal = settings.gptzeroSource === 'personal';
   const busy = enablingGptzero || gptzeroConnecting;
+  zeroAccess.hidden = personal || !gptzero.available || (gptzero.permissionGranted && gptzero.connected);
+  zeroAccess.disabled = busy || connecting || !!connectionCheck;
+  zeroAccess.textContent = busy ? 'Connecting…' : gptzero.permissionGranted ? 'Connect GPTZero' : 'Allow GPTZero access';
+  toggle.disabled = busy || connecting || !!connectionCheck;
   $<HTMLButtonElement>('detector-gptzero').disabled = busy || connecting || !!connectionCheck;
   $<HTMLButtonElement>('detector-jev').disabled = busy || connecting || !!connectionCheck;
   $('detector-gptzero').setAttribute('aria-busy', String(busy));
@@ -165,12 +175,13 @@ function save(patch: Partial<Settings>): Promise<void> {
 function saveControl(patch: Partial<Settings>) { $('message').hidden = true; void save(patch).catch(e => message(e.message, true)); }
 $('detector-jev').addEventListener('click', () => { saveControl({ detector: 'jev' }); });
 $('detector-gptzero').addEventListener('click', () => { void activateGptzero(settings.gptzeroSource); });
+zeroAccess.addEventListener('click', () => { void activateGptzero('free'); });
 zeroSource.addEventListener('change', () => { void activateGptzero(zeroSource.value as Settings['gptzeroSource']); });
 async function activateGptzero(source: Settings['gptzeroSource']) {
   if (enablingGptzero || gptzeroConnecting) return;
   enablingGptzero = true; render();
   try {
-    // Keep the permission request inside the tab click's user gesture.
+    // Request before any await, while the button/tab/select gesture is active.
     const origin = source === 'personal' ? gptzero.personalKeySaved ? GPTZERO_API_ORIGIN : '' : GPTZERO_PROXY_ORIGIN;
     if (origin && !await chrome.permissions.request({ origins: [origin] })) throw new Error('Access was not granted.');
     await saveTask;
@@ -180,7 +191,13 @@ async function activateGptzero(source: Settings['gptzeroSource']) {
   } catch (e) { message((e as Error).message, true); }
   finally { enablingGptzero = false; await refresh(); }
 }
-toggle.addEventListener('click', () => saveControl({ enabled: !settings.enabled }));
+toggle.addEventListener('click', () => {
+  if (!settings.enabled && settings.detector === 'gptzero') {
+    void activateGptzero(settings.gptzeroSource);
+  } else {
+    saveControl({ enabled: !settings.enabled });
+  }
+});
 threshold.addEventListener('input', () => { $('threshold-value').textContent = `${threshold.value}%`; fillThreshold(); });
 threshold.addEventListener('change', () => saveControl({ threshold: Number(threshold.value) / 100 }));
 $('theme').addEventListener('change', () => saveControl({ theme: $<HTMLSelectElement>('theme').value as Settings['theme'] }));

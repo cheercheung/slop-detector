@@ -89,12 +89,18 @@ export default {
     try { body = await readBody(request); } catch { return reply({ error: 'Invalid request body.' }, 400); }
     if (!body || typeof body !== 'object' || Array.isArray(body)) return reply({ error: 'Invalid request body.' }, 400);
     if (path === '/v1/check' && (typeof body.text !== 'string' || !body.text.trim() || body.text.length > MAX_TEXT || Object.keys(body).some(key => key !== 'text'))) return reply({ error: 'Send only text, up to 6,000 characters.' }, 400);
+    let quotaStage = 'configuration';
     try {
       const limits = readLimits(env as unknown as Record<string, unknown>);
+      quotaStage = 'identity';
       const userHash = await digest(env.HASH_SECRET, `installation:${installation}`);
       const quotas = env.QUOTAS.get(env.QUOTAS.idFromName('sponsored-v1'));
-      if (path === '/v1/usage') return reply({ usage: await quotas.usage(userHash, limits) });
+      if (path === '/v1/usage') {
+        quotaStage = 'usage';
+        return reply({ usage: await quotas.usage(userHash, limits) });
+      }
       const [ipHash, textHash] = await Promise.all([digest(env.HASH_SECRET, `ip:${ip}`), digest(env.HASH_SECRET, `gptzero-v1:${body.text}`)]);
+      quotaStage = 'reserve';
       const reserved = await quotas.reserve(userHash, ipHash, textHash, body.text.length, limits);
       if (reserved.kind !== 'reserved') return reply({ ...reserved.result, ...(reserved.kind === 'cached' && reserved.result.status === 'ok' ? { cached: true } : {}), usage: reserved.usage });
       let result: Classification;
@@ -128,9 +134,14 @@ export default {
       }
       // No raw text, provider response or key is stored. Reservations count even
       // on uncertain failures; refunding could allow repeated unmetered API calls.
+      quotaStage = 'finish';
       await quotas.finish(textHash, reserved.ticket, result.status === 'ok' || result.status === 'unrated' ? result : undefined, cooldown);
       return reply({ ...result, usage: reserved.usage });
-    } catch {
+    } catch (error) {
+      // Only infrastructure errors reach this catch; provider responses and
+      // post text are never logged. Normal Worker log storage remains disabled.
+      const failure = error as Error & { retryable?: boolean; overloaded?: boolean };
+      console.error('Quota operation failed', { stage: quotaStage, name: failure?.name, message: failure?.message, retryable: failure?.retryable, overloaded: failure?.overloaded });
       // A failed quota read/write must never fall through to the paid API.
       return reply({ status: 'error', code: 'provider', message: 'Free scanning is temporarily unavailable. Please try later.', retryAfter: 60000 }, 503);
     }

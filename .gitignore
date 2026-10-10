@@ -7,3 +7,4 @@ test-results/
 .dev.vars*
 .env*
 proxy.config.json
+.demo/
