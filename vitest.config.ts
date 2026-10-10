@@ -14,8 +14,7 @@ export default defineConfig({
       include: ['src/**/*.ts', 'proxy/{quota,limits}.ts'],
       exclude: ['src/**/*.d.ts', 'src/font.ts', 'src/stamp.ts', 'src/gptzero-config.ts'],
       reporter: ['text', 'html', 'lcov'],
-      // Browser-only layout/viewport code remains visible as uncovered here;
-      // the Chromium integration suite checks it separately.
+
       thresholds: {
         statements: 50,
         branches: 50,

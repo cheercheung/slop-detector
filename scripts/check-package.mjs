@@ -3,7 +3,6 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { RELEASE_FILES } from './release-files.mjs';
 
-/** @param {string} directory */
 export async function checkPackage(directory = 'dist') {
   const actual = await readdir(directory, { recursive: true, withFileTypes: true });
   const files = actual

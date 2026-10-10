@@ -1,7 +1,7 @@
 ## Change
 
-What does this fix or improve?
+What changed?
 
-## Validation
+## Testing
 
-Which checks passed? Include screenshots for UI changes.
+How did you test it? Include screenshots for UI changes.

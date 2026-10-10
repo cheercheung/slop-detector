@@ -517,14 +517,12 @@ footer {
   border: 0;
 }
 [hidden] {
-  /* biome-ignore lint/complexity/noImportantStyles: hidden must override component display rules. */
   display: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
   * {
-    /* biome-ignore lint/complexity/noImportantStyles: respect reduced motion across every component. */
     transition: none !important;
-    /* biome-ignore lint/complexity/noImportantStyles: respect reduced motion across every component. */
+
     animation: none !important;
   }
 }

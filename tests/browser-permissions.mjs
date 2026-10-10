@@ -6,8 +6,6 @@ export const providerOrigins = [
   'https://api.typesafe.ai/*',
 ];
 
-// Headless Chromium cannot click its native extension permission dialog.
-// Simulate that boundary and its grant state; run the real popup/background logic.
 export async function mockPermissionPrompts(
   context,
   worker,

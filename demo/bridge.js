@@ -1,4 +1,3 @@
-// This file is included ONLY by the local demonstration documents.
 const demo = parent.__slopDemo;
 if (!demo) throw new Error('Open the staged feed homepage, not this iframe directly.');
 const chromeDemo = window.chrome || {};
@@ -18,6 +17,5 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') demo.escape();
 });
 document.addEventListener('click', (event) => {
-  // The fictional profile, post and navigation links stay inside the demo.
   if (event.target.closest('a')) event.preventDefault();
 });

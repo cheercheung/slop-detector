@@ -1,10 +1,9 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { Resvg } from '@resvg/resvg-js';
 import { build } from 'esbuild';
-import { normalizeProxyUrl } from './proxy-url.mjs';
+import { normalizeProxyUrl } from './proxy-url.mts';
 
-/** @type {{url?: unknown}} */
-let saved = {};
+let saved: { url?: unknown } = {};
 try {
   saved = JSON.parse(await readFile('proxy.config.json', 'utf8'));
 } catch (e) {
@@ -49,7 +48,6 @@ await build({
   minify: true,
 });
 
-// Render each Chrome size directly from the editable SVG for smooth, crisp edges.
 const icon = await readFile('public/icons/radar.svg');
 for (const size of [16, 32, 48, 128]) {
   const png = new Resvg(icon, {

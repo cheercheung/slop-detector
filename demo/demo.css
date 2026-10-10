@@ -170,7 +170,6 @@ kbd {
   background: #fff;
 }
 [hidden] {
-  /* biome-ignore lint/complexity/noImportantStyles: hidden must override component display rules. */
   display: none !important;
 }
 body.capture {

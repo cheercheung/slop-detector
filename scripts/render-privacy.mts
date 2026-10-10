@@ -3,20 +3,19 @@ import { fileURLToPath } from 'node:url';
 
 const root = new URL('../', import.meta.url);
 const source = await readFile(new URL('PRIVACY.md', root), 'utf8');
-/** @param {string} text */
-const escapeHtml = (text) =>
+
+const escapeHtml = (text: string) =>
   text
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;');
-/** @param {string} text */
-const inline = (text) =>
+
+const inline = (text: string) =>
   escapeHtml(text)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-// The policy uses headings, paragraphs and unordered lists only. Escape all
-// source HTML; no remote renderer, scripts, fonts, tracking or dependencies.
+
 const sections = source
   .trim()
   .split(/\n\s*\n/)

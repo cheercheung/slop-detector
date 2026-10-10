@@ -57,6 +57,26 @@
           }
         }
       }
+    },
+    {
+      "includes": ["public/popup.css", "demo/demo.css"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noImportantStyles": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["public/popup.html", "demo/index.html"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          }
+        }
+      }
     }
   ]
 }

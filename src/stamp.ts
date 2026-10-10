@@ -31,7 +31,6 @@ const STAMP_CSS = `
 export type SlopStamp = { refresh: () => void; destroy: () => void };
 
 export function createStamp(article: HTMLElement): SlopStamp {
-  // A local positioning context keeps the oversized entrance inside this post.
   const positioned = getComputedStyle(article).position === 'static';
   if (positioned) article.setAttribute('data-jev-stamp-position', 'true');
   article.setAttribute('data-jev-stamped', 'true');
@@ -72,7 +71,7 @@ export function createStamp(article: HTMLElement): SlopStamp {
     const rect = article.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const anchor = labelAnchor(article)?.getBoundingClientRect();
-    // Stop the overlay above separately rated replies, even inside a long thread.
+
     const children = Array.from(article.querySelectorAll<HTMLElement>('[data-jev-target]'))
       .map((node) => node.getBoundingClientRect())
       .filter((child) => child.width && child.height && child.top > rect.top);
@@ -106,7 +105,6 @@ export function createStamp(article: HTMLElement): SlopStamp {
   resize.observe(article);
   refresh();
 
-  // A result can arrive after scrolling away; save the punchline until visible again.
   const visibility = new IntersectionObserver((changes) => {
     if (!changes.some((change) => change.isIntersecting) || document.hidden) return;
     host.setAttribute('data-dropped', 'true');

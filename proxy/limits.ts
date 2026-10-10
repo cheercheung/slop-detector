@@ -1,4 +1,3 @@
-// These are protective defaults, not a promise of GPTZero sponsorship.
 export type Limits = {
   weekly: number;
   perMinute: number;

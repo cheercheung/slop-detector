@@ -1,5 +1,4 @@
-/** @param {unknown} value */
-export function normalizeProxyUrl(value) {
+export function normalizeProxyUrl(value: unknown) {
   if (!value) return '';
   if (typeof value !== 'string') throw new Error('Proxy URL must be a string');
   const url = new URL(value);

@@ -5,7 +5,6 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 import { mockPermissionPrompts } from './browser-permissions.mjs';
 
-// Use the packaged extension and SDK, mocking provider transport and permission dialogs.
 const profile = await mkdtemp(path.join(tmpdir(), 'jev-viewport-test-'));
 const extension = path.resolve('dist');
 const context = await chromium.launchPersistentContext(profile, {
@@ -92,7 +91,6 @@ try {
   await waitRequest('The X post below the viewport.');
   console.log('PASS: X posts inside the former 250px lookahead stay unrated until visible');
 
-  // Both parent containers intersect the viewport, but only the reply's own text does.
   await open(
     'www.linkedin.com',
     `<div role="listitem" componentkey="update-card-focusViewport" style="height:2400px">
@@ -161,7 +159,6 @@ try {
   await waitRequest('A post passed too quickly to read.');
   console.log('PASS: posts scrolled past before the dwell delay are skipped and checked on return');
 
-  // Force the isolated world's visibility flag: headless Chromium does not hide background tabs.
   const cdp = await context.newCDPSession(page);
   const worlds = [];
   cdp.on('Runtime.executionContextCreated', (event) => worlds.push(event.context));
@@ -192,7 +189,6 @@ try {
   await waitRequest('An updated post in a background tab.');
   console.log('PASS: hidden tabs stay idle until visible again');
 
-  // Exercise the busy/retry path without waiting for a provider's minute-long cooldown.
   await content(`globalThis.viewportSend = chrome.runtime.sendMessage.bind(chrome.runtime); globalThis.viewportAttempts = 0; chrome.runtime.sendMessage = message => {
     if (message.type === 'classify' && message.post.text === 'A deferred retry scrolled away.') {
       globalThis.viewportAttempts++;
@@ -214,8 +210,6 @@ try {
   await waitRequest('A deferred retry scrolled away.');
   console.log('PASS: deferred retries also wait until the item is back in view');
 
-  // Root overflow scrolls the viewport, not a second clipping box that moves
-  // offscreen with the page. X uses a scrolling root around its virtual feed.
   await open(
     'x.com',
     `<style>html{overflow-y:scroll}</style>` +
@@ -239,7 +233,6 @@ try {
   await notRequested('A reply below the body scrolling viewport.');
   console.log('PASS: body overflow propagated to the viewport does not clip visible replies');
 
-  // Body can still be a real nested scroller when root overflow is explicit.
   await open(
     'x.com',
     `<style>html{overflow:hidden}body{position:relative;height:160px;min-height:0;overflow:auto}</style>` +

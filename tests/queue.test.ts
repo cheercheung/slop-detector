@@ -46,7 +46,7 @@ test('stalled feed evaluations release queue slots on timeout and pause, ignorin
   const realFetch = globalThis.fetch;
   globalThis.fetch = async (_input, init) => {
     if (!JSON.parse(String(init!.body)).state.startsWith('Stalled')) return response();
-    // The transport deliberately ignores abort, as a stuck SDK/body read can.
+
     return new Promise<Response>((resolve) => stalled.push({ resolve, signal: init!.signal! }));
   };
   t.onTestFinished(() => {

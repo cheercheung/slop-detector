@@ -32,8 +32,7 @@ function update(patch: Record<string, unknown>) {
   for (const listener of listeners)
     listener({ type: 'settingsChanged', settings: { ...settings } });
 }
-// Only these local iframe documents use this in-memory stand-in for Chrome.
-// No credentials, storage, external API, or installed extension are involved.
+
 const demo = {
   subscribe(listener: Listener) {
     listeners.add(listener);

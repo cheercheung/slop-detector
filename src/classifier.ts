@@ -16,8 +16,6 @@ import {
 export const AI_INSTRUCTIONS = DEFAULT_PROMPT;
 type EvaluationSettings = Pick<Settings, 'prompt' | 'provider'>;
 
-// TypeSafe's direct API has the same typed question semantics. This small adapter
-// keeps validation, aborts and retry policy under the same AI SDK evaluation call.
 function directJev(
   apiKey: string,
   transport: typeof fetch,
@@ -73,7 +71,6 @@ export async function evaluatePost(
   customFetch?: typeof fetch,
   settings: EvaluationSettings = DEFAULT_SETTINGS,
 ): Promise<Verdict> {
-  // Never send cookies or follow a provider redirect with a credential.
   const transport: typeof fetch = (input, init) =>
     (customFetch ?? fetch)(input, { ...init, credentials: 'omit', redirect: 'error' });
   const model =

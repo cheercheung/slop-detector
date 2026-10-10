@@ -140,8 +140,7 @@ try {
           assert.ok(
             state.radarBox.x >= state.textBox.x && state.radarBox.right <= state.textBox.right,
           );
-          // A banner, image or preceding post can change height without resizing this
-          // post or firing a scroll event. The radar must move with its own text.
+
           const radarOffset = () =>
             ['one', 'two'].map((id) => {
               const text = document.querySelector(`#${id} .text`).getBoundingClientRect();

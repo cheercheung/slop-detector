@@ -4,7 +4,6 @@ import { test } from 'vitest';
 import { GPTZERO_API_ORIGIN } from '../src/gptzero-config';
 import { mockPermissions } from './permissions-fixture';
 
-// Run through the actual background message boundary, including reload state.
 test('personal GPTZero survives reload, gates credentials, cancels stale work and preserves keys on a failed replacement', async (t) => {
   const local: Record<string, any> = {
     keys: { gptzero: 'existing-personal-key' },

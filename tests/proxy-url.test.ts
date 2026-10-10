@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { normalizeProxyUrl } from '../scripts/proxy-url.mjs';
+import { normalizeProxyUrl } from '../scripts/proxy-url.mts';
 
 test('build accepts only a public HTTPS origin without credentials or paths', () => {
   expect(normalizeProxyUrl('https://proxy.example.test/')).toBe('https://proxy.example.test');

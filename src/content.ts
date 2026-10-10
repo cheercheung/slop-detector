@@ -138,7 +138,7 @@ function alignLabel(entry: Entry) {
   if (!anchor) return;
   const text = anchor.getBoundingClientRect(),
     host = entry.host.getBoundingClientRect();
-  // Keep the last measured inset while Hide conceals the original text.
+
   if (!text.width || !text.height || !host.width) return;
   const css = getComputedStyle(anchor);
   const left = Math.max(
@@ -173,8 +173,7 @@ function positionRadar(entry: Entry) {
   const floating =
     !entry.host.hidden && entry.host.hasAttribute('data-floating') && entry.host.isConnected;
   let container = floating ? entry.host.parentElement : null;
-  // Keep the overlay beside the text, outside any clamped/overflow-hidden text
-  // box, and give it a local containing block that moves with the post.
+
   while (container && ['contents', 'inline'].includes(getComputedStyle(container).display))
     container = container.parentElement;
   if (entry.radarAnchor !== container) {
@@ -192,8 +191,7 @@ function positionRadar(entry: Entry) {
     bounds = container.getBoundingClientRect();
   if (!text.width || !text.height) return;
   const css = getComputedStyle(anchor);
-  // Measure scale from the fixed-size indicator; parent offset dimensions are
-  // rounded and would introduce drift when text has fractional line heights.
+
   const marker = entry.button.getBoundingClientRect();
   const scaleX = marker.width / entry.button.offsetWidth || 1;
   const scaleY = marker.height / entry.button.offsetHeight || 1;
@@ -219,8 +217,7 @@ function effects(entry: Entry) {
     settings.configured &&
     entry.verdict &&
     isSlopVerdict(entry.verdict, settings.threshold);
-  // Layout reads below flush styles. Clearing an existing fade first would
-  // briefly restore full opacity and restart its transition on every scan.
+
   if (slop && settings.theme === 'fade') applyDim(entry.article);
   else clearDim(entry.article);
   clearConcealed(entry);
@@ -259,8 +256,7 @@ function effects(entry: Entry) {
   if (settings.theme === 'stamp' && !entry.stamp) entry.stamp = createStamp(entry.article);
   if (collapsed) {
     entry.article.setAttribute('data-jev-collapsed', 'true');
-    // Collapse this item's own branches, keeping separately rated replies and
-    // the reveal button intact. Never remove the site's DOM or interaction state.
+
     const conceal = (parent: HTMLElement) => {
       for (const node of Array.from(parent.children)) {
         if (
@@ -287,7 +283,6 @@ function label(entry: Entry, text: string, tone = 'neutral', detail = '', score?
   entry.button.disabled = tone === 'pending';
   entry.button.replaceChildren();
   if (tone === 'pending') {
-    // The same concentric rings, sweep and blip as the extension's radar icon.
     entry.button.innerHTML = `<svg class="radar" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" stroke-width="1.3" opacity=".8"/><circle cx="12" cy="12" r="4.85" stroke-width="1.15" opacity=".55"/><g class="radar-sweep"><path d="M12 12V3a9 9 0 0 1 6.364 2.636Z" fill="currentColor" fill-opacity=".12" stroke="none"/><path d="m12 12 6.364-6.364" stroke-width="1.4"/></g><circle cx="6.7" cy="16.15" r="1.2" fill="currentColor" stroke="none"/></svg>`;
   }
   if (tone === 'clean') {
@@ -377,7 +372,6 @@ function paint(entry: Entry) {
   }
 }
 function makeEntry(article: HTMLElement, post: Post): Entry {
-  // A site may clone/recycle markup without cloning the associated shadow roots.
   article.querySelectorAll('jev-slop-label, jev-slop-stamp').forEach((node) => {
     if (ownsNode(article, node)) node.remove();
   });
@@ -493,7 +487,6 @@ function unwatchVisibility(entry: Entry) {
   entry.visibleSince = 0;
 }
 function watchVisibility(entry: Entry) {
-  // A LinkedIn post/comment container can span an entire reply thread.
   const target = labelAnchor(entry.article) ?? entry.article;
   if (target === entry.visibilityTarget) return;
   unwatchVisibility(entry);
@@ -504,7 +497,7 @@ function watchVisibility(entry: Entry) {
 function inView(entry: Entry): boolean {
   const target = entry.visibilityTarget;
   if (document.hidden || !target?.isConnected || !entry.article.isConnected) return false;
-  // Observer callbacks arrive asynchronously. Recheck the current position before dispatch.
+
   const rect = target.getBoundingClientRect();
   let left = Math.max(0, rect.left),
     top = Math.max(0, rect.top);
@@ -518,10 +511,7 @@ function inView(entry: Entry): boolean {
     const css = getComputedStyle(node);
     if (css.visibility !== 'visible' || css.display === 'none' || Number(css.opacity) === 0)
       return false;
-    // The document root clips to the viewport (already applied above), not
-    // its clientHeight at a page-scrolled bounding rect. Body overflow also
-    // propagates to the viewport when the root has its default overflow.
-    // display:contents has no box and cannot clip its children.
+
     if (node === target || node === document.documentElement || css.display === 'contents')
       continue;
     if (node === document.body) {

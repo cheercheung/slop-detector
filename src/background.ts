@@ -129,7 +129,6 @@ let nextCheckId = 0;
 let connectionCheck: (ConnectionCheckStatus & { controller: AbortController }) | undefined;
 let connectionResult: ConnectionCheckResult | null = null;
 
-// An abort signal alone cannot settle an SDK or response body that stops responding.
 function abortable<T>(action: () => Promise<T>, signal: AbortSignal): Promise<T> {
   let onAbort: () => void;
   return new Promise<T>((resolve, reject) => {
@@ -162,7 +161,6 @@ function expireConnectionCheck() {
   }
 }
 
-// Apply access restrictions before loading or saving any secret.
 const ready = (async () => {
   await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
   await chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
@@ -170,7 +168,7 @@ const ready = (async () => {
     chrome.storage.local.get(['settings', 'apiKey', 'keys', 'optionalProvidersMigrated']),
     chrome.storage.session.get(['cache', 'stats']),
   ]);
-  // Preserve existing Jev users; new installs start with GPTZero setup.
+
   settings = normalizeSettings(local.settings);
   if (
     !(local.settings as Partial<Settings> | undefined)?.detector &&
@@ -182,11 +180,10 @@ const ready = (async () => {
   for (const provider of KEY_PROVIDERS)
     if (typeof savedKeys?.[provider] === 'string') keys[provider] = savedKeys[provider] as string;
   if (!keys.gateway && typeof local.apiKey === 'string') keys.gateway = local.apiKey;
-  // Migrate existing installations without asking for their key again.
+
   await chrome.storage.local.set({ keys, settings });
   await chrome.storage.local.remove('apiKey');
-  // Older versions requested every provider at installation. Retain access only
-  // for providers the user has connected; never remove their saved credentials.
+
   if (!local.optionalProvidersMigrated) {
     const unused = PROVIDERS.filter((provider) => !keys[provider]).map(
       (provider) => PROVIDER_ORIGINS[provider],
@@ -214,9 +211,7 @@ const ready = (async () => {
       ) {
         try {
           cache.set(key, v.gptzero === undefined ? v : normalizeGptzeroVerdict(v));
-        } catch {
-          /* Ignore corrupt cached GPTZero data rather than applying its old score. */
-        }
+        } catch {}
       }
     }
 })();
@@ -243,7 +238,6 @@ function persist() {
   }, 200);
 }
 function broadcast() {
-  // A stale or suspended tab must never hold up saving a key or other settings.
   void chrome.tabs
     .query({ url: SITE_PATTERNS })
     .then((tabs) =>
@@ -283,7 +277,7 @@ async function classify(post: Post): Promise<Classification> {
   const credential = activeKey();
   const key = await contentHash(post, snapshot);
   if (requestGeneration !== generation) return { status: 'busy', retryAfter: 100 };
-  // Settings can change while hashing a post.
+
   if (!settings.enabled) return { status: 'paused' };
   if (!publicSettings().configured) return { status: 'setup' };
   const cached = cache.get(key);
@@ -391,7 +385,7 @@ function isPopup(sender: chrome.runtime.MessageSender) {
 
 function gptzeroKeyError(error: unknown): string {
   const message = error instanceof Error ? error.message : '';
-  // Never expose an upstream body, URL or credential in a popup error.
+
   return [
     'Check your GPTZero API key.',
     'Your GPTZero credits have run out.',
@@ -416,7 +410,6 @@ async function handle(message: unknown, sender: chrome.runtime.MessageSender): P
     try {
       await chrome.action.openPopup(sender.tab ? { windowId: sender.tab.windowId } : {});
     } catch {
-      // Chrome 120–126 only supports openPopup for policy-installed extensions.
       await chrome.runtime.openOptionsPage();
     }
     return { ok: true };
@@ -504,9 +497,7 @@ async function handle(message: unknown, sender: chrome.runtime.MessageSender): P
         const signal = AbortSignal.timeout(10000);
         try {
           await abortable(() => refreshGptzeroUsage(signal), signal);
-        } catch {
-          /* Keep the last known allowance. */
-        }
+        } catch {}
       }
       return { gptzero: zeroStatus() };
     }
@@ -615,7 +606,7 @@ async function handle(message: unknown, sender: chrome.runtime.MessageSender): P
         const provider = m.provider ?? settings.provider;
         if (provider !== 'gptzero' && !isProvider(provider))
           return { error: 'Choose a supported provider.' };
-        // Cancel validation before removing a key so a late response cannot restore it.
+
         if (connectionCheck?.provider === provider) cancelConnectionCheck();
         const nextKeys = { ...keys };
         delete nextKeys[provider];
@@ -652,7 +643,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     .catch(() => sendResponse({ error: 'Request failed. Reload the extension.' }));
   return true;
 });
-// Permissions can also change in Chrome's extension settings while tabs are open.
+
 for (const event of [chrome.permissions.onAdded, chrome.permissions.onRemoved]) {
   event.addListener(() => {
     void ready.then(refreshProviderAccess).catch(() => {});

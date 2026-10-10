@@ -103,8 +103,7 @@ export default {
       .filter((id) => /^[a-p]{32}$/.test(id));
     const headers: Record<string, string> = { 'Cache-Control': 'no-store', Vary: 'Origin' };
     const reply = (body: unknown, status = 200) => Response.json(body, { status, headers });
-    // An origin allowlist is a browser boundary, NOT proof that a caller is the
-    // extension. Installation/IP limits and global budgets contain arbitrary clients.
+
     if (!allowed.some((id) => origin === `chrome-extension://${id}`))
       return reply({ error: 'Origin not allowed.' }, 403);
     headers['Access-Control-Allow-Origin'] = origin;
@@ -196,9 +195,7 @@ export default {
         });
         if (response.ok) {
           const verdict = parseGptzeroResponse(await response.json(), started);
-          // Keep the v1 wire format compatible with already-installed clients
-          // and cached responses. Updated extensions derive AI-only scores from
-          // the three-class breakdown, for both fresh and cached responses.
+
           verdict.probability = Math.min(
             1,
             verdict.gptzero!.probabilities.ai + verdict.gptzero!.probabilities.mixed,
@@ -236,8 +233,7 @@ export default {
           retryAfter: cooldown,
         };
       }
-      // No raw text, provider response or key is stored. Reservations count even
-      // on uncertain failures; refunding could allow repeated unmetered API calls.
+
       quotaStage = 'finish';
       await quotas.finish(
         textHash,
@@ -247,8 +243,6 @@ export default {
       );
       return reply({ ...result, usage: reserved.usage });
     } catch (error) {
-      // Only infrastructure errors reach this catch; provider responses and
-      // post text are never logged. Normal Worker log storage remains disabled.
       const failure = error as Error & { retryable?: boolean; overloaded?: boolean };
       console.error('Quota operation failed', {
         stage: quotaStage,
@@ -257,7 +251,7 @@ export default {
         retryable: failure?.retryable,
         overloaded: failure?.overloaded,
       });
-      // A failed quota read/write must never fall through to the paid API.
+
       return reply(
         {
           status: 'error',

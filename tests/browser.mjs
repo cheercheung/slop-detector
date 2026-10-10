@@ -20,7 +20,7 @@ try {
   const worker = context.serviceWorkers()[0] || (await context.waitForEvent('serviceworker'));
   const extensionId = new URL(worker.url()).host;
   await mockPermissionPrompts(context, worker, extensionId);
-  // Mock provider transport and native permission dialogs; run the packaged worker and real SDK.
+
   await worker.evaluate(() => {
     globalThis.__requests = [];
     globalThis.__failure = 0;
@@ -47,7 +47,6 @@ try {
       globalThis.__active++;
       globalThis.__maxActive = Math.max(globalThis.__maxActive, globalThis.__active);
       if (globalThis.__holdCheck && data.state.startsWith('The library closes at 6 pm today;')) {
-        // Deliberately ignore abort to reproduce a stuck SDK/transport operation.
         await new Promise((resolve) => globalThis.__heldChecks.push(resolve));
       }
       await new Promise((resolve) =>
@@ -283,8 +282,6 @@ try {
     'PASS: real extension labels visible posts, leaves media-only items unmarked, defers offscreen posts',
   );
 
-  // Force the compatibility fallback and verify real label clicks open the
-  // extension's settings without navigating the post or changing its height.
   await popup.goto('about:blank');
   await worker.evaluate(() => {
     globalThis.__openPopup = chrome.action.openPopup;
@@ -414,7 +411,6 @@ try {
   assert.equal(await feed.locator('#below jev-slop-stamp').count(), 1);
   console.log('PASS: threshold reclassifies cached scores without API calls');
 
-  // Exercise the actual extension content-script world, not a page-world mock.
   const cdp = await context.newCDPSession(feed);
   const worlds = [];
   cdp.on('Runtime.executionContextCreated', (event) => worlds.push(event.context));
@@ -1040,7 +1036,7 @@ try {
   const requestsAfterDisplay = await worker.evaluate(() =>
     globalThis.__requests.map((request) => request.body.state),
   );
-  // Collapsing rows can bring new items into view. Already-rated items still reuse their scores.
+
   for (const state of new Set(requestsBeforeDisplay)) {
     assert.equal(
       requestsAfterDisplay.filter((text) => text === state).length,

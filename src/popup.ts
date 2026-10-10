@@ -296,7 +296,6 @@ async function activateGptzero(source: Settings['gptzeroSource']) {
   enablingGptzero = true;
   render();
   try {
-    // Request before any await, while the button/tab/select gesture is active.
     const origin =
       source === 'personal'
         ? gptzero.personalKeySaved
@@ -353,7 +352,6 @@ provider.addEventListener('change', async () => {
   requestingAccess = true;
   renderConnection();
   try {
-    // Request directly in this user gesture, before awaiting saved settings.
     const granted = await chrome.permissions.request({ origins: [PROVIDER_ORIGINS[selected]] });
     if (!granted) throw new Error(`Access to ${PROVIDER_NAMES[selected]} was not granted.`);
     permissionStatus[selected] = true;
@@ -419,7 +417,6 @@ $('key-form').addEventListener('submit', async (event) => {
   renderConnection();
   message('');
   try {
-    // Calling before any await preserves Chrome's required user gesture.
     const granted = await chrome.permissions.request({ origins: [PROVIDER_ORIGINS[selected]] });
     if (!granted) throw new Error(`Access to ${PROVIDER_NAMES[selected]} was not granted.`);
     permissionStatus[selected] = true;

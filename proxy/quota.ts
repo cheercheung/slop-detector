@@ -8,8 +8,6 @@ type Reservation =
   | { kind: 'cached'; result: StoredResult; usage: GptzeroUsage }
   | { kind: 'blocked'; result: Classification; usage: GptzeroUsage };
 
-// All reads/checks/increments run in one synchronous SQLite transaction in one
-// Durable Object. Concurrent Workers cannot spend the same remaining allowance.
 export class QuotaStore {
   constructor(
     private sql: SqlStorage,
@@ -146,7 +144,6 @@ export class QuotaStore {
     });
   }
   cleanup(now: number) {
-    // Bounded cleanup prevents an idle deployment accumulating expired counters.
     this.sql.exec(
       'DELETE FROM entries WHERE key IN (SELECT key FROM entries WHERE expires <= ? LIMIT 500)',
       now,

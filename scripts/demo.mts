@@ -2,7 +2,7 @@ import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build } from 'esbuild';
+import { type BuildOptions, build } from 'esbuild';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.join(root, '.demo');
@@ -19,8 +19,8 @@ await writeFile(
     '<script src="bridge.js"></script><script src="popup.js" defer></script>',
   ),
 );
-/** @type {import('esbuild').BuildOptions} */
-const common = {
+
+const common: BuildOptions = {
   absWorkingDir: root,
   bundle: true,
   platform: 'browser',
@@ -43,8 +43,6 @@ for (const [site, hostname] of [
   ['x', 'x.com'],
   ['linkedin', 'www.linkedin.com'],
 ]) {
-  // Compile only these separate demo bundles for local fixture documents.
-  // The extension's production source, dist and ZIP remain untouched.
   await build({
     ...common,
     entryPoints: ['src/content.ts'],
@@ -53,10 +51,10 @@ for (const [site, hostname] of [
     define: { 'location.hostname': JSON.stringify(hostname) },
   });
 }
-/** @type {Map<string, string>} */
-const files = new Map();
-/** @param {string} directory @param {string} prefix */
-async function index(directory, prefix = '') {
+
+const files = new Map<string, string>();
+
+async function index(directory: string, prefix = '') {
   const { readdir } = await import('node:fs/promises');
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const relative = `${prefix}/${entry.name}`;
@@ -66,8 +64,8 @@ async function index(directory, prefix = '') {
   }
 }
 await index(output);
-/** @type {Record<string, string>} */
-const types = {
+
+const types: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',

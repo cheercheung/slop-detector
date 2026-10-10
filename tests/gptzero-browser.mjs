@@ -9,8 +9,6 @@ import { convertV4MiniflareOptions, Miniflare } from 'miniflare';
 import { chromium } from 'playwright';
 import { mockPermissionPrompts, providerOrigins } from './browser-permissions.mjs';
 
-// Real extension → local HTTPS relay → real Worker + SQLite → mocked GPTZero.
-// No real provider credentials, Cloudflare account or paid calls are used.
 const temp = await mkdtemp(path.join(tmpdir(), 'slop-gptzero-e2e-'));
 await mkdir('test-results', { recursive: true });
 execFileSync(
@@ -112,7 +110,7 @@ try {
   );
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const proxyUrl = `https://127.0.0.1:${server.address().port}`;
-  execFileSync(process.execPath, ['scripts/build.mjs'], {
+  execFileSync(process.execPath, ['scripts/build.mts'], {
     env: { ...process.env, GPTZERO_PROXY_URL: proxyUrl, BUILD_DIR: 'dist-test' },
     stdio: 'pipe',
   });

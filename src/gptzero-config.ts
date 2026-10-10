@@ -1,4 +1,3 @@
-// Only a public HTTPS endpoint is compiled into the extension. Never an API key.
 declare const __GPTZERO_PROXY_URL__: string;
 export const GPTZERO_PROXY_URL =
   typeof __GPTZERO_PROXY_URL__ === 'string' ? __GPTZERO_PROXY_URL__ : '';

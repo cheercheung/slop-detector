@@ -1,7 +1,7 @@
 import { cleanText, MAX_TEXT, type Post } from './shared';
 
 export const X_POST = 'article[data-testid="tweet"]';
-// SDUI uses opaque CSS classes, but stable component keys and text test IDs.
+
 export const LINKEDIN_POST =
   '[role="listitem"][componentkey^="update-card-focus"], [data-view-name="feed-full-update"], .feed-shared-update-v2, [data-urn^="urn:li:activity:"], [data-id^="urn:li:activity:"]';
 export const LINKEDIN_COMMENT =
@@ -43,7 +43,7 @@ export function findPosts(): HTMLElement[] {
     (node) => {
       if (node.closest(EDITOR)) return false;
       const identity = commentIdentity(node);
-      // SDUI sometimes nests two wrappers with the same comment URN. Use the inner one.
+
       return (
         !identity ||
         !Array.from(node.querySelectorAll<HTMLElement>(LINKEDIN_COMMENT)).some(
@@ -104,18 +104,18 @@ export function dimContent(article: HTMLElement): HTMLElement[] {
 }
 export function labelAnchor(article: HTMLElement): HTMLElement | null {
   const text = textNodes(article)[0];
-  // SDUI text is inside a paragraph: place the block badge after the paragraph.
+
   return text?.parentElement?.tagName === 'P' ? text.parentElement : (text ?? null);
 }
 export function labelAlignmentAnchor(article: HTMLElement): HTMLElement | null {
   let text: HTMLElement | null = textNodes(article)[0] ?? null;
-  // Classic cards can put their inset on a text wrapper nested inside the description.
+
   while (text) {
     const nested: HTMLElement | null = text.querySelector<HTMLElement>(COMMENT_TEXT);
     if (!nested) break;
     text = nested;
   }
-  // Inline spans only cover their words; use the containing text column's full width.
+
   while (text && text !== article && getComputedStyle(text).display === 'inline')
     text = text.parentElement;
   return text;

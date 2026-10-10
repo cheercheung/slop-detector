@@ -1,5 +1,5 @@
 import { writeFile } from 'node:fs/promises';
-import { normalizeProxyUrl } from './proxy-url.mjs';
+import { normalizeProxyUrl } from './proxy-url.mts';
 
 const url = normalizeProxyUrl(process.argv[2]);
 if (!url) throw new Error('Pass your deployed Worker’s HTTPS URL. Never pass an API key.');

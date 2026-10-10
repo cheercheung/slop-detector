@@ -30,7 +30,7 @@ test('key checks time out, cancel and retry without stale writes or waiting for 
   globalThis.chrome = {
     permissions: mockPermissions([PROVIDER_ORIGINS.jev]),
     storage: { local: area(local), session: area(session) },
-    // Simulate a suspended tab whose message handler never responds.
+
     tabs: { query: async () => [{ id: 99 }], sendMessage: () => new Promise(() => {}) },
     runtime: {
       id: 'test',
@@ -46,7 +46,6 @@ test('key checks time out, cancel and retry without stale writes or waiting for 
   const realFetch = globalThis.fetch;
   globalThis.fetch = async (_input, init) =>
     new Promise<Response>((resolve) => {
-      // Deliberately ignore abort: the extension must still release the check.
       requests.push({ resolve, signal: init!.signal! });
     });
   t.onTestFinished(() => {

@@ -208,13 +208,11 @@ export function verdictLabel(probability: number, threshold: number): string {
   return probability >= threshold ? 'Slop' : 'Not slop';
 }
 export function isSlopVerdict(verdict: Verdict, threshold: number): boolean {
-  // Even with a low user threshold, a Mixed/Human classification is not Slop.
   if (verdict.gptzero)
     return verdict.gptzero.classification === 'ai' && verdict.gptzero.probabilities.ai >= threshold;
   return verdict.probability >= threshold;
 }
 
-// Treat external JSON and messages as unknown until their fields are checked.
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

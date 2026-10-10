@@ -31,8 +31,7 @@ export function gptzeroStatus(permissionGranted: boolean): GptzeroStatus {
 }
 async function rememberUsage(value: unknown) {
   if (!validUsage(value)) return;
-  // Concurrent responses can arrive out of order. Never show a lower count for
-  // the same week. Clearing scores and switching detectors don't clear quota.
+
   if (usage && usage.resetsAt > value.resetsAt) return;
   const used = usage?.resetsAt === value.resetsAt ? Math.max(usage.used, value.used) : value.used;
   usage = { ...value, used, remaining: Math.max(0, value.limit - used) };

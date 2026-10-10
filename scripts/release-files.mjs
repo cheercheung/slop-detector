@@ -1,4 +1,3 @@
-// The same allowlist is used to validate dist/ and create the release archive.
 export const RELEASE_FILES = [
   'manifest.json',
   'background.js',

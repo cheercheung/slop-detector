@@ -33,7 +33,7 @@ function database() {
       return { toArray: () => db.prepare(query).all(...bindings) };
     },
   };
-  // Real SQLite executes immediately, as does the Durable Object API.
+
   const adapter = {
     exec(query: string, ...bindings: any[]) {
       const rows = sql.exec(query, ...bindings).toArray();
