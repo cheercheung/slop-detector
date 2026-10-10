@@ -24,7 +24,7 @@ Load `dist/` at `chrome://extensions` with Developer mode enabled. Free GPTZero 
 - `npm run package` — build `slop-detector.zip`.
 - `npm run demo` — open the [screenshot demo](demo/README.md).
 
-[Installation](INSTALL.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Privacy](PRIVACY.md)
+[Installation](INSTALL.md) · [Contributing](CONTRIBUTING.md) · [Privacy](PRIVACY.md)
 
 ## License
 
