@@ -109,6 +109,12 @@ test('migrates legacy keys, serializes settings and restricts credential access'
   assert.ok((await send({ type: 'saveSettings', settings: { prompt: '' } })).error);
   assert.ok((await send({ type: 'saveSettings', settings: { prompt: 'x'.repeat(2001) } })).error);
   assert.equal((await send({ type: 'getSettings' })).prompt, saved.prompt);
+  await send({ type: 'saveSettings', settings: { threshold: 0.31, language: 'zh-CN' } });
+  const customized = await send({ type: 'getSettings' }, true);
+  assert.equal(customized.threshold, 0.31);
+  assert.equal(customized.language, 'zh-CN');
+  assert.equal((local.settings as { threshold: number }).threshold, 0.31);
+  assert.equal((local.settings as { language: string }).language, 'zh-CN');
   await send({ type: 'clearCache' });
   assert.ok((await send({ type: 'getSettings' })).cacheEpoch > saved.cacheEpoch);
   await send({ type: 'disconnect', provider: 'jev' });

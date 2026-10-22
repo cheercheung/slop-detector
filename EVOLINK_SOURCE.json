@@ -1,0 +1,12 @@
+{
+  "upstream": "https://github.com/rbilgil/slop-detector",
+  "upstream_commit": "365e11972afea2907d2edac3d2509e857dfe3fff",
+  "license": "MIT",
+  "source_post": "https://x.com/RBilgil/status/2100976648552169805",
+  "source_verification": "Original X direct read returned 403; confirmed repository, author/project docs and indexed source mapping; no performance/price claim revalidated.",
+  "local_branch": "local/evolink-luna-decision",
+  "adapted_at": "2026-10-21",
+  "customized_at": "2026-10-22",
+  "live_api_calls": 0,
+  "published": false
+}

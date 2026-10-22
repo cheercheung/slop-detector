@@ -589,3 +589,24 @@ footer {
 .meter[data-low="true"] span {
   background: var(--red);
 }
+
+.language-row {
+  margin-top: 14px;
+}
+.threshold-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.threshold-input input {
+  width: 64px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--well);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+#reset-threshold {
+  margin-top: 6px;
+}

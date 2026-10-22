@@ -10,6 +10,7 @@ The extension sends post text, up to 6,000 characters per check, to your chosen 
 
 - **Free GPTZero:** text goes through our Cloudflare server to GPTZero.
 - **Your GPTZero key:** text goes directly to GPTZero using your key.
+- **EvoLink Luna Decision (local adaptation, 2026-10-21):** visible post text and your custom prompt go directly to EvoLink at `direct.evolink.ai` using your key. The detector returns a probability, not proof of authorship. No Chrome profile data was read or transmitted during this adaptation.
 - **Jev:** text and your custom prompt go to TypeSafe, directly or through your chosen provider, Vercel AI Gateway or OpenRouter.
 
 Connecting a personal key sends a short sample to check it works. Only the selected provider receives your key. Cloudflare and the AI providers process requests under their own privacy policies.

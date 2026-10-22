@@ -73,20 +73,20 @@ test('GPTZero uses documented three-class probabilities, sanitizes output and is
   ])
     assert.throws(() => parseGptzeroResponse(data, now, now));
   const post = { id: '1', text: 'Some readable post.', hasMedia: false, truncated: false };
-  assert.equal(DEFAULT_SETTINGS.detector, 'gptzero');
+  const zeroSettings = { ...DEFAULT_SETTINGS, detector: 'gptzero' as const };
   assert.equal(
-    postContentKey(post),
-    postContentKey(post, { ...DEFAULT_SETTINGS, prompt: 'Is this an ad?' }),
+    postContentKey(post, zeroSettings),
+    postContentKey(post, { ...zeroSettings, prompt: 'Is this an ad?' }),
   );
   assert.notEqual(
-    postContentKey(post),
-    postContentKey(post, { ...DEFAULT_SETTINGS, detector: 'jev' }),
+    postContentKey(post, zeroSettings),
+    postContentKey(post, { ...zeroSettings, detector: 'jev' }),
   );
   assert.equal(
-    detectionChanged(DEFAULT_SETTINGS, { ...DEFAULT_SETTINGS, prompt: 'Is this an ad?' }),
+    detectionChanged(zeroSettings, { ...zeroSettings, prompt: 'Is this an ad?' }),
     false,
   );
-  assert.equal(detectionChanged(DEFAULT_SETTINGS, { ...DEFAULT_SETTINGS, detector: 'jev' }), true);
+  assert.equal(detectionChanged(zeroSettings, { ...zeroSettings, detector: 'jev' }), true);
   assert.ok(validUsage({ limit: 0, remaining: 0, used: 1, resetsAt: now }));
   assert.equal(validUsage({ limit: 1000, used: 5, remaining: 1000, resetsAt: now }), false);
 });

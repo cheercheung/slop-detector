@@ -11,60 +11,63 @@
   <main>
     <header>
       <img src="icons/radar.svg" alt="" width="34" height="34"><div><h1>Slop Detector</h1><p>X &amp; LinkedIn<span id="session-count" class="session-count" hidden></span></p></div>
-      <button id="enabled" class="switch" type="button" role="switch" aria-label="Enable real-time scanning" aria-checked="true"><span></span></button>
+      <button id="enabled" class="switch" type="button" role="switch" aria-label="Enable real-time scanning" data-i18n-aria-label="Enable real-time scanning" aria-checked="true"><span></span></button>
     </header>
 
-    <div class="detectors" role="group" aria-label="Detector">
-      <button id="detector-gptzero" type="button" aria-pressed="true">GPTZero <span id="gptzero-plan">Free</span></button>
-      <button id="detector-jev" type="button" aria-pressed="false">Jev</button>
+    <div class="row language-row"><label for="language" data-i18n-text="Language">Language</label><select id="language"><option value="auto" data-i18n-text="Browser language">Browser language</option><option value="en">English</option><option value="zh-CN">简体中文</option></select></div>
+    <div class="detectors" role="group" aria-label="Detector" data-i18n-aria-label="Detector">
+      <button id="detector-gptzero" type="button" aria-pressed="true">GPTZero <span id="gptzero-plan" data-i18n-text="Free">Free</span></button>
+      <button id="detector-jev" type="button" aria-pressed="false" data-i18n-text="Decision model">Decision model</button>
     </div>
-    <section id="gptzero-section" class="gptzero-section" aria-label="GPTZero connection">
+    <section id="gptzero-section" class="gptzero-section" aria-label="GPTZero connection" data-i18n-aria-label="GPTZero connection">
       <p id="gptzero-status" class="status" hidden></p>
       <div class="usage"><p id="gptzero-usage" class="quota" hidden></p><p id="gptzero-reset" class="help" hidden></p></div>
       <div id="gptzero-meter" class="meter" hidden><span></span></div>
-      <div class="row"><label for="gptzero-source">Access</label><select id="gptzero-source"><option value="free">Free</option><option value="personal">Your API key</option></select></div>
-      <button id="gptzero-access" class="access-button" type="button" hidden>Allow GPTZero access</button>
+      <div class="row"><label for="gptzero-source" data-i18n-text="Access">Access</label><select id="gptzero-source"><option value="free" data-i18n-text="Free">Free</option><option value="personal" data-i18n-text="Your API key">Your API key</option></select></div>
+      <button id="gptzero-access" class="access-button" type="button" hidden data-i18n-text="Allow GPTZero access">Allow GPTZero access</button>
       <details id="gptzero-connection" hidden>
-        <summary><span>API key</span><span id="gptzero-key-status" class="meta">Add key</span></summary>
+        <summary><span data-i18n-text="API key">API key</span><span id="gptzero-key-status" class="meta" data-i18n-text="Add key">Add key</span></summary>
         <form id="gptzero-key-form">
-          <label class="sr-only" for="gptzero-key">GPTZero API key</label>
-          <div class="key-input"><input id="gptzero-key" type="password" maxlength="1000" placeholder="Paste your GPTZero API key" autocomplete="off" spellcheck="false" autocapitalize="off" required><button id="gptzero-show-key" type="button" aria-label="Show GPTZero API key">Show</button></div>
-          <div class="actions"><a href="https://app.gptzero.me/app/api" target="_blank" rel="noreferrer">Get a key</a><div class="connection-actions"><button type="button" id="gptzero-cancel" class="text-button" hidden>Cancel</button><button type="submit" id="gptzero-connect">Connect</button></div></div>
-          <button id="gptzero-disconnect" class="text-button remove" type="button" hidden>Remove saved key</button>
+          <label class="sr-only" for="gptzero-key" data-i18n-text="GPTZero API key">GPTZero API key</label>
+          <div class="key-input"><input id="gptzero-key" type="password" maxlength="1000" placeholder="Paste your GPTZero API key" data-i18n-placeholder="Paste your GPTZero API key" autocomplete="off" spellcheck="false" autocapitalize="off" required><button id="gptzero-show-key" type="button" aria-label="Show GPTZero API key" data-i18n-aria-label="Show GPTZero API key" data-i18n-text="Show">Show</button></div>
+          <div class="actions"><a href="https://app.gptzero.me/app/api" target="_blank" rel="noreferrer" data-i18n-text="Get a key">Get a key</a><div class="connection-actions"><button type="button" id="gptzero-cancel" class="text-button" hidden data-i18n-text="Cancel">Cancel</button><button type="submit" id="gptzero-connect" data-i18n-text="Connect">Connect</button></div></div>
+          <button id="gptzero-disconnect" class="text-button remove" type="button" hidden data-i18n-text="Remove saved key">Remove saved key</button>
         </form>
       </details>
     </section>
-    <section id="provider-section" hidden class="provider-section" aria-label="Provider and API key" data-configured="false">
+    <section id="provider-section" hidden class="provider-section" aria-label="Provider and API key" data-i18n-aria-label="Provider and API key" data-configured="false">
       <p id="status-title" class="status" hidden></p>
-      <div class="row"><label for="provider">Provider</label><select id="provider"><option value="gateway">AI Gateway</option><option value="openrouter">OpenRouter</option><option value="jev">Jev (TypeSafe)</option></select></div>
+      <div class="row"><label for="provider" data-i18n-text="Provider">Provider</label><select id="provider"><option value="gateway" data-i18n-text="AI Gateway">AI Gateway</option><option value="openrouter" data-i18n-text="OpenRouter">OpenRouter</option><option value="jev" data-i18n-text="Jev (TypeSafe)">Jev (TypeSafe)</option><option value="evolink" data-i18n-text="EvoLink Luna Decision">EvoLink Luna Decision</option></select></div>
       <details id="connection" open>
-        <summary><span>API key</span><span id="key-status" class="meta">Add key</span></summary>
+        <summary><span data-i18n-text="API key">API key</span><span id="key-status" class="meta" data-i18n-text="Add key">Add key</span></summary>
         <form id="key-form">
-          <label class="sr-only" id="key-label" for="api-key">AI Gateway API key</label>
-          <div class="key-input"><input id="api-key" type="password" maxlength="1000" placeholder="Paste your API key" autocomplete="off" spellcheck="false" autocapitalize="off" required><button id="show-key" type="button" aria-label="Show API key">Show</button></div>
-          <div class="actions"><a id="get-key" href="https://vercel.com/d/ai-gateway" target="_blank" rel="noreferrer">Get a key</a><div class="connection-actions"><button type="button" id="cancel-connection" class="text-button" hidden>Cancel</button><button type="submit" id="connect" disabled>Connect</button></div></div>
-          <button id="disconnect" class="text-button remove" type="button" hidden>Remove saved key</button>
+          <label class="sr-only" id="key-label" for="api-key" data-i18n-text="AI Gateway API key">AI Gateway API key</label>
+          <div class="key-input"><input id="api-key" type="password" maxlength="1000" placeholder="Paste your API key" data-i18n-placeholder="Paste your API key" autocomplete="off" spellcheck="false" autocapitalize="off" required><button id="show-key" type="button" aria-label="Show API key" data-i18n-aria-label="Show API key" data-i18n-text="Show">Show</button></div>
+          <div class="actions"><a id="get-key" href="https://vercel.com/d/ai-gateway" target="_blank" rel="noreferrer" data-i18n-text="Get a key">Get a key</a><div class="connection-actions"><button type="button" id="cancel-connection" class="text-button" hidden data-i18n-text="Cancel">Cancel</button><button type="submit" id="connect" disabled data-i18n-text="Connect">Connect</button></div></div>
+          <button id="disconnect" class="text-button remove" type="button" hidden data-i18n-text="Remove saved key">Remove saved key</button>
         </form>
       </details>
     </section>
     <section id="appearance-section" class="setup-dependent" data-setup-pending="true" inert aria-labelledby="appearance-title">
-      <h2 id="appearance-title">Appearance</h2>
-      <div class="row"><label for="theme">On slop</label><select id="theme"><option value="stamp">Stamp</option><option value="fade">Fade out</option><option value="hide" selected>Hide</option></select></div>
-      <label class="row" for="show-not-slop"><span>Show not-slop</span><input id="show-not-slop" type="checkbox" checked></label>
-      <label class="row" for="show-score"><span>Show score</span><input id="show-score" type="checkbox" checked></label>
-      <div class="row threshold-label"><label for="threshold">Slop threshold</label><output id="threshold-value" for="threshold">70%</output></div>
-      <input id="threshold" type="range" min="35" max="90" step="5" value="70">
+      <h2 id="appearance-title" data-i18n-text="Appearance">Appearance</h2>
+      <div class="row"><label for="theme" data-i18n-text="On slop">On slop</label><select id="theme"><option value="stamp" data-i18n-text="Stamp">Stamp</option><option value="fade" data-i18n-text="Fade out">Fade out</option><option value="hide" selected data-i18n-text="Hide">Hide</option></select></div>
+      <label class="row" for="show-not-slop"><span data-i18n-text="Show not-slop">Show not-slop</span><input id="show-not-slop" type="checkbox" checked></label>
+      <label class="row" for="show-score"><span data-i18n-text="Show score">Show score</span><input id="show-score" type="checkbox" checked></label>
+      <div class="row threshold-label"><label for="threshold" data-i18n-text="Slop threshold">Slop threshold</label><div class="threshold-input"><input id="threshold-number" type="number" min="0" max="100" step="1" value="70" aria-label="Threshold percentage" data-i18n-aria-label="Threshold percentage"><span>%</span></div><output id="threshold-value" for="threshold" class="sr-only">70%</output></div>
+      <input id="threshold" aria-describedby="threshold-rule" type="range" min="0" max="100" step="1" value="70">
+      <p id="threshold-rule" class="help">Slop probability ≥ 70% is Slop. Changes save automatically.</p>
+      <button id="reset-threshold" class="text-button" type="button" data-i18n-text="Reset to 70%">Reset to 70%</button>
     </section>
     <details id="prompt-section" hidden>
-      <summary><span>Prompt</span><span id="prompt-status" class="meta">Default</span></summary>
+      <summary><span data-i18n-text="Prompt">Prompt</span><span id="prompt-status" class="meta" data-i18n-text="Default">Default</span></summary>
       <form id="prompt-form">
-        <label class="sr-only" for="prompt">Prompt</label>
+        <label class="sr-only" for="prompt" data-i18n-text="Prompt">Prompt</label>
         <textarea id="prompt" rows="3" maxlength="2000" required spellcheck="false">Is this an automated, AI-generated or otherwise low-effort post that offers little value?</textarea>
-        <div class="actions"><button id="reset-prompt" type="button" class="text-button">Reset to default</button><button id="save-prompt" type="submit">Save prompt</button></div>
+        <div class="actions"><button id="reset-prompt" type="button" class="text-button" data-i18n-text="Reset to default">Reset to default</button><button id="save-prompt" type="submit" data-i18n-text="Save prompt">Save prompt</button></div>
       </form>
     </details>
     <p id="message" class="message" role="status" aria-live="polite" hidden></p>
-    <footer id="popup-footer" class="setup-dependent" data-setup-pending="true" inert><a id="attribution" href="https://gptzero.me/" target="_blank" rel="noreferrer">Powered by GPTZero</a><button id="clear-cache" class="text-button" type="button">Clear cache</button></footer>
+    <footer id="popup-footer" class="setup-dependent" data-setup-pending="true" inert><a id="attribution" href="https://gptzero.me/" target="_blank" rel="noreferrer" data-i18n-text="Powered by GPTZero">Powered by GPTZero</a><button id="clear-cache" class="text-button" type="button" data-i18n-text="Clear cache">Clear cache</button></footer>
   </main>
 </body>
 </html>

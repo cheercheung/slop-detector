@@ -15,6 +15,7 @@
     "https://ai-gateway.vercel.sh/*",
     "https://openrouter.ai/*",
     "https://api.typesafe.ai/*",
+    "https://direct.evolink.ai/*",
     "https://api.gptzero.me/*"
   ],
   "background": {
@@ -52,6 +53,6 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; connect-src https://ai-gateway.vercel.sh https://openrouter.ai https://api.typesafe.ai https://api.gptzero.me"
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src https://ai-gateway.vercel.sh https://openrouter.ai https://api.typesafe.ai https://direct.evolink.ai https://api.gptzero.me"
   }
 }

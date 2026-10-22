@@ -66,7 +66,12 @@ test('provider permissions migrate, gate requests, handle revocation and preserv
     [PROVIDER_ORIGINS.gateway],
     'Upgrade removes unused providers, preserving the connected provider',
   );
-  assert.deepEqual(initial.permissionStatus, { gateway: true, openrouter: false, jev: false });
+  assert.deepEqual(initial.permissionStatus, {
+    gateway: true,
+    openrouter: false,
+    jev: false,
+    evolink: false,
+  });
   assert.equal(initial.settings.configured, true);
   assert.equal(
     (await send({ type: 'connect', provider: 'jev', apiKey: 'not-authorized-key' })).code,

@@ -3,23 +3,29 @@ export const RUBRIC_VERSION = '4-custom-prompts';
 export const DEFAULT_PROMPT =
   'Is this an automated, AI-generated or otherwise low-effort post that offers little value?';
 export const MAX_PROMPT = 2000;
-export const PROVIDERS = ['gateway', 'openrouter', 'jev'] as const;
+export const PROVIDERS = ['gateway', 'openrouter', 'jev', 'evolink'] as const;
+export type Language = 'auto' | 'en' | 'zh-CN';
+export const EVOLINK_KEY_URL =
+  'https://evolink.ai/dashboard/keys?utm_source=github&utm_medium=extension&utm_campaign=slop';
 export type Provider = (typeof PROVIDERS)[number];
 export type KeyProvider = Provider | 'gptzero';
 export const PROVIDER_NAMES: Record<Provider, string> = {
   gateway: 'AI Gateway',
   openrouter: 'OpenRouter',
   jev: 'Jev (TypeSafe)',
+  evolink: 'EvoLink Luna Decision',
 };
 export const PROVIDER_ORIGINS: Record<Provider, string> = {
   gateway: 'https://ai-gateway.vercel.sh/*',
   openrouter: 'https://openrouter.ai/*',
   jev: 'https://api.typesafe.ai/*',
+  evolink: 'https://direct.evolink.ai/*',
 };
 export const PROVIDER_MODELS: Record<Provider, string> = {
   gateway: MODEL,
   openrouter: 'typesafe/jev-1.13',
   jev: 'jev-latest',
+  evolink: 'gpt-6-luna-decisions',
 };
 export type Theme = 'stamp' | 'fade' | 'hide';
 export const SITE_PATTERNS = [
@@ -31,6 +37,7 @@ export const SITE_PATTERNS = [
 export const MAX_TEXT = 6000;
 export type Detector = 'gptzero' | 'jev';
 export type Settings = {
+  language: Language;
   detector: Detector;
   gptzeroSource: 'free' | 'personal';
   enabled: boolean;
@@ -42,12 +49,13 @@ export type Settings = {
   theme: Theme;
 };
 export const DEFAULT_SETTINGS: Settings = {
-  detector: 'gptzero',
+  language: 'auto',
+  detector: 'jev',
   gptzeroSource: 'free',
   enabled: true,
   threshold: 0.7,
   prompt: DEFAULT_PROMPT,
-  provider: 'gateway',
+  provider: 'evolink',
   showNotSlop: true,
   showScore: true,
   theme: 'hide',
@@ -149,13 +157,14 @@ export function normalizeSettings(value: unknown): Settings {
     dimSlop?: boolean;
   };
   return {
+    language: v.language === 'en' || v.language === 'zh-CN' ? v.language : 'auto',
     detector:
       v.detector === 'jev' || v.detector === 'gptzero' ? v.detector : DEFAULT_SETTINGS.detector,
     gptzeroSource: v.gptzeroSource === 'personal' ? 'personal' : 'free',
     enabled: typeof v.enabled === 'boolean' ? v.enabled : DEFAULT_SETTINGS.enabled,
     threshold:
       typeof v.threshold === 'number' && Number.isFinite(v.threshold)
-        ? Math.min(0.9, Math.max(0.35, v.threshold))
+        ? Math.round(Math.min(1, Math.max(0, v.threshold)) * 100) / 100
         : DEFAULT_SETTINGS.threshold,
     prompt:
       typeof v.prompt === 'string' && v.prompt.trim()

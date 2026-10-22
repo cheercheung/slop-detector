@@ -43,7 +43,7 @@ const KEY_PROVIDERS = [...PROVIDERS, 'gptzero'] as const;
 const KEY_ORIGINS = { ...PROVIDER_ORIGINS, gptzero: GPTZERO_API_ORIGIN };
 const KEY_NAMES = { ...PROVIDER_NAMES, gptzero: 'GPTZero' };
 let keys: Partial<Record<KeyProvider, string>> = {};
-let permissionStatus: KeyStatus = { gateway: false, openrouter: false, jev: false };
+let permissionStatus: KeyStatus = { gateway: false, openrouter: false, jev: false, evolink: false };
 let gptzeroPermission = false;
 let gptzeroDirectPermission = false;
 function keyPermission(provider: KeyProvider) {
@@ -180,6 +180,9 @@ const ready = (async () => {
   for (const provider of KEY_PROVIDERS)
     if (typeof savedKeys?.[provider] === 'string') keys[provider] = savedKeys[provider] as string;
   if (!keys.gateway && typeof local.apiKey === 'string') keys.gateway = local.apiKey;
+  // Preserve legacy Gateway connections that predate explicit provider settings.
+  if (!(local.settings as Partial<Settings> | undefined)?.provider && keys.gateway)
+    settings.provider = 'gateway';
 
   await chrome.storage.local.set({ keys, settings });
   await chrome.storage.local.remove('apiKey');

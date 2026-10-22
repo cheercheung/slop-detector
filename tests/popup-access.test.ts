@@ -5,7 +5,7 @@ import { JSDOM } from 'jsdom';
 import { afterEach, test, vi } from 'vitest';
 import type { PopupRequest } from '../src/messages';
 import type { GptzeroUsage } from '../src/shared';
-import { DEFAULT_SETTINGS, EMPTY_STATS, type Settings } from '../src/shared';
+import { DEFAULT_SETTINGS, EMPTY_STATS, EVOLINK_KEY_URL, type Settings } from '../src/shared';
 
 vi.mock('../src/gptzero-config', () => ({
   GPTZERO_PROXY_ORIGIN: 'https://proxy.example.test/*',
@@ -124,6 +124,12 @@ async function popup(
       state.inGesture = false;
       await settle();
     },
+    async change(id: string, value: string) {
+      const element = control(id);
+      element.value = value;
+      element.dispatchEvent(new dom.window.Event('change'));
+      await settle();
+    },
     async refresh() {
       vi.advanceTimersByTime(2000);
       await settle();
@@ -131,8 +137,8 @@ async function popup(
   };
 }
 
-test('fresh install can grant GPTZero access without changing detector tabs', async () => {
-  const p = await popup();
+test('GPTZero tab can grant access without changing detector tabs', async () => {
+  const p = await popup({ detector: 'gptzero' });
   assert.equal(p.control('detector-gptzero').getAttribute('aria-pressed'), 'true');
   assert.equal(p.control('gptzero-access').textContent, 'Allow GPTZero access');
   assert.equal(
@@ -154,7 +160,7 @@ test('fresh install can grant GPTZero access without changing detector tabs', as
 });
 
 test('denied permission and failed setup remain retryable on the selected GPTZero tab', async () => {
-  const p = await popup();
+  const p = await popup({ detector: 'gptzero' });
   p.state.grant = false;
   await p.click('gptzero-access');
   assert.equal(p.state.connections, 0);
@@ -172,7 +178,10 @@ test('denied permission and failed setup remain retryable on the selected GPTZer
 });
 
 test('revoked free access can be restored without re-registering the installation', async () => {
-  const p = await popup({}, { permissionGranted: true, connected: true, available: true });
+  const p = await popup(
+    { detector: 'gptzero' },
+    { permissionGranted: true, connected: true, available: true },
+  );
   assert.equal(p.control('gptzero-access').hidden, true);
   p.state.zero.permissionGranted = false;
   await p.refresh();
@@ -184,7 +193,7 @@ test('revoked free access can be restored without re-registering the installatio
 });
 
 test('enabling GPTZero requests access; pausing and Jev do not', async () => {
-  const p = await popup({ enabled: false });
+  const p = await popup({ enabled: false, detector: 'gptzero' });
   p.state.grant = false;
   await p.click('enabled');
   assert.equal(p.state.settings.enabled, false, 'Denied access must not turn scanning on');
@@ -206,12 +215,57 @@ test('GPTZero tab still connects directly, and personal-key mode has no free acc
   assert.equal(p.state.settings.detector, 'gptzero');
   assert.equal(p.state.connections, 1);
   assert.equal(p.control('gptzero-access').hidden, true);
-  const personal = await popup({ gptzeroSource: 'personal' });
+  const personal = await popup({ detector: 'gptzero', gptzeroSource: 'personal' });
   assert.equal(personal.control('gptzero-access').hidden, true);
   assert.equal(personal.control('gptzero-connection').open, true);
   const unavailable = await popup(
-    {},
+    { detector: 'gptzero' },
     { permissionGranted: false, connected: false, available: false },
   );
   assert.equal(unavailable.control('gptzero-access').hidden, true);
+});
+
+test('Luna selection identifies its own provider without making a connection request', async () => {
+  const { control, state } = await popup({ detector: 'jev', provider: 'evolink' });
+  assert.equal(control('attribution').textContent, 'Powered by EvoLink Luna Decision');
+  assert.equal(control('attribution').getAttribute('href'), EVOLINK_KEY_URL);
+  assert.equal(control('get-key').getAttribute('href'), EVOLINK_KEY_URL);
+  assert.match(control('key-label').textContent ?? '', /EvoLink Luna Decision/);
+  assert.equal(state.connections, 0);
+  assert.deepEqual(state.requests, []);
+});
+
+test('custom threshold and language persist, preserve key drafts, and never connect a provider', async () => {
+  const p = await popup({ detector: 'jev' });
+  assert.equal(p.state.settings.provider, 'evolink');
+  p.control('api-key').value = 'local-draft-placeholder';
+  await p.change('language', 'zh-CN');
+  assert.equal(p.state.settings.language, 'zh-CN');
+  assert.equal(p.control('detector-jev').textContent, '决策模型');
+  assert.equal(p.control('connect').textContent, '连接');
+  assert.equal(p.control('api-key').value, 'local-draft-placeholder');
+  await p.change('threshold-number', '31');
+  assert.equal(p.state.settings.threshold, 0.31);
+  assert.equal(p.control('threshold').value, '31');
+  assert.match(p.control('threshold-rule').textContent ?? '', /≥ 31%/);
+  await p.refresh();
+  assert.equal(p.control('threshold-number').value, '31');
+  for (const invalid of ['', '-1', '101', '3.5']) {
+    await p.change('threshold-number', invalid);
+    assert.equal(p.state.settings.threshold, 0.31);
+    assert.match(p.control('message').textContent ?? '', /0 到 100/);
+  }
+  await p.change('threshold', '0');
+  assert.equal(p.state.settings.threshold, 0);
+  await p.change('threshold-number', '100');
+  assert.equal(p.state.settings.threshold, 1);
+  await p.click('reset-threshold');
+  assert.equal(p.state.settings.threshold, 0.7);
+  assert.equal(p.control('threshold-number').value, '70');
+  await p.change('language', 'en');
+  assert.equal(p.control('detector-jev').textContent, 'Decision model');
+  assert.equal(p.control('connect').textContent, 'Connect');
+  assert.equal(p.control('api-key').value, 'local-draft-placeholder');
+  assert.equal(p.state.connections, 0);
+  assert.deepEqual(p.state.requests, []);
 });

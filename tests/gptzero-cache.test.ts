@@ -6,7 +6,11 @@ import { DEFAULT_SETTINGS, postContentKey } from '../src/shared';
 import { mockPermissions } from './permissions-fixture';
 
 test('background reuses old mixed and AI caches with corrected scores and no new paid calls', async (t) => {
-  const settings = { ...DEFAULT_SETTINGS, gptzeroSource: 'personal' as const };
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    detector: 'gptzero' as const,
+    gptzeroSource: 'personal' as const,
+  };
   const posts = ['Previously stamped polished text.', 'Previously scored AI text.'].map(
     (text, i) => ({ id: String(i), text, hasMedia: false, truncated: false }),
   );

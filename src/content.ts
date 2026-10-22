@@ -7,6 +7,7 @@ import {
   ownsNode,
 } from './extract';
 import { fontReady } from './font';
+import { resolveLanguage, translate } from './i18n';
 import {
   type Classification,
   DEFAULT_SETTINGS,
@@ -57,6 +58,8 @@ const alignmentResize = new ResizeObserver((changes) => {
   }
 });
 let settings: PublicSettings = { ...DEFAULT_SETTINGS, configured: false, cacheEpoch: 0 };
+const t = (text: string, values?: Record<string, string | number>) =>
+  translate(settings.language, text, values);
 let running = 0;
 let alive = true;
 let scanTimer: ReturnType<typeof setTimeout> | undefined;
@@ -230,7 +233,7 @@ function effects(entry: Entry) {
   const collapsed = !!slop && settings.theme === 'hide' && !entry.revealed;
   entry.host.toggleAttribute('data-collapsed', collapsed);
   entry.reveal.hidden = !slop || settings.theme !== 'hide';
-  entry.reveal.textContent = entry.revealed ? 'Hide post' : '';
+  entry.reveal.textContent = entry.revealed ? t('Hide post') : '';
   if (!entry.revealed) {
     const text = document.createElement('span');
     for (const [name, value] of [
@@ -240,7 +243,7 @@ function effects(entry: Entry) {
     ] as const) {
       const part = document.createElement('span');
       part.className = name;
-      part.textContent = value;
+      part.textContent = t(value);
       text.append(part);
     }
     entry.reveal.append(text);
@@ -276,6 +279,9 @@ function effects(entry: Entry) {
   }
 }
 function label(entry: Entry, text: string, tone = 'neutral', detail = '', score?: number) {
+  text = t(text);
+  detail = t(detail);
+  entry.host.lang = resolveLanguage(settings.language);
   entry.host.dataset.tone = tone;
   entry.host.toggleAttribute('data-floating', tone === 'pending' && !settings.showNotSlop);
   entry.host.toggleAttribute('data-scanning', tone === 'pending' && entry.state === 'pending');
@@ -308,7 +314,7 @@ function label(entry: Entry, text: string, tone = 'neutral', detail = '', score?
   }
   entry.button.setAttribute(
     'aria-label',
-    `${text}${score !== undefined && settings.showScore ? `, ${Math.round(score * 100)} percent confidence` : ''}${tone === 'pending' ? '' : tone === 'error' ? '. Retry this post.' : '. Open Slop Detector settings.'}`,
+    `${score !== undefined && settings.showScore ? t('{text}, {score} percent confidence', { text, score: Math.round(score * 100) }) : text}${tone === 'pending' ? '' : `. ${t(tone === 'error' ? 'Retry this post' : 'Open Slop Detector settings')}.`}`,
   );
   entry.button.title = detail;
   entry.host.hidden = !settings.showNotSlop && (tone === 'clean' || tone === 'pending');
@@ -320,7 +326,12 @@ function paint(entry: Entry) {
     effects(entry);
     return;
   }
-  const detectorName = settings.detector === 'gptzero' ? 'GPTZero' : 'Jev';
+  const detectorName =
+    settings.detector === 'gptzero'
+      ? 'GPTZero'
+      : settings.provider === 'evolink'
+        ? 'Luna Decision'
+        : 'Jev';
   if (!settings.enabled) {
     label(entry, 'Detector paused', 'paused', 'Open Slop Detector settings');
     return;
@@ -341,7 +352,7 @@ function paint(entry: Entry) {
   if (!settings.configured) {
     label(
       entry,
-      settings.permissionRequired ? 'Allow provider access' : 'Connect Jev',
+      settings.permissionRequired ? 'Allow provider access' : `Connect ${detectorName}`,
       'neutral',
       'Open Slop Detector settings',
     );

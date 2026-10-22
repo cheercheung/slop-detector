@@ -1,6 +1,7 @@
 import { createGateway } from '@ai-sdk/gateway';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { type Experimental_EvaluationModel, experimental_evaluate as evaluate } from 'ai';
+import { directLuna } from './luna';
 import {
   type Classification,
   DEFAULT_PROMPT,
@@ -78,7 +79,9 @@ export async function evaluatePost(
       ? createGateway({ apiKey, fetch: transport }).evaluationModel(PROVIDER_MODELS.gateway)
       : settings.provider === 'openrouter'
         ? createOpenRouter({ apiKey, fetch: transport }).evaluationModel(PROVIDER_MODELS.openrouter)
-        : directJev(apiKey, transport);
+        : settings.provider === 'evolink'
+          ? directLuna(apiKey, transport)
+          : directJev(apiKey, transport);
   const started = Date.now();
   const result = await evaluate({
     model,
@@ -124,7 +127,7 @@ export function safeError(
     return {
       status: 'error',
       code: 'invalid_response',
-      message: 'Invalid Jev result.',
+      message: `Invalid ${name} result.`,
       retryAfter: 60_000,
     };
   if (e?.name === 'TypeError' || e?.message?.includes('fetch'))

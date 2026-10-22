@@ -1,3 +1,5 @@
+> **Local EvoLink adaptation (updated 2026-10-22):** EvoLink Luna Decision is the fresh-install default. English / 简体中文 are switchable; Slop probability ≥ your custom threshold (default 70%) is flagged. [Setup](INSTALL.md) · [Verification and provenance](EVOLINK_LOCAL.md). Original upstream demo timings and prices are not Luna measurements.
+
 # Slop Detector
 
 Chrome extension that marks AI slop on X and LinkedIn, including comments and replies.
