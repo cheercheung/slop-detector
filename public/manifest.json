@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Slop Detector \u00b7 X & LinkedIn",
+  "name": "Slop Detector · X & LinkedIn",
   "version": "2.1.3",
-  "description": "Spot AI-generated posts with GPTZero, or use Jev with your own prompt. Scores, stamps and filtering for X and LinkedIn.",
+  "description": "Filter low-quality AI content on X and LinkedIn. EvoLink Luna Decision, OpenRouter and Jev. English / 简体中文.",
   "minimum_chrome_version": "120",
   "permissions": ["storage"],
   "host_permissions": [
@@ -12,7 +12,6 @@
     "https://linkedin.com/*"
   ],
   "optional_host_permissions": [
-    "https://ai-gateway.vercel.sh/*",
     "https://openrouter.ai/*",
     "https://api.typesafe.ai/*",
     "https://direct.evolink.ai/*",
@@ -53,6 +52,6 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; connect-src https://ai-gateway.vercel.sh https://openrouter.ai https://api.typesafe.ai https://direct.evolink.ai https://api.gptzero.me"
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src https://openrouter.ai https://api.typesafe.ai https://direct.evolink.ai https://api.gptzero.me"
   }
 }

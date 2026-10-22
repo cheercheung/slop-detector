@@ -5,7 +5,7 @@ import { PROVIDER_ORIGINS } from '../src/shared';
 import { mockPermissions } from './permissions-fixture';
 
 test('provider permissions migrate, gate requests, handle revocation and preserve saved keys', async (t) => {
-  const local: Record<string, any> = { keys: { gateway: 'saved-gateway-test-key' } };
+  const local: Record<string, any> = { keys: { evolink: 'saved-evolink-test-key' } };
   const session: Record<string, any> = {};
   const permissions = mockPermissions(Object.values(PROVIDER_ORIGINS));
   let listener: (
@@ -63,14 +63,13 @@ test('provider permissions migrate, gate requests, handle revocation and preserv
   const initial = await dashboard();
   assert.deepEqual(
     [...permissions.granted],
-    [PROVIDER_ORIGINS.gateway],
+    [PROVIDER_ORIGINS.evolink],
     'Upgrade removes unused providers, preserving the connected provider',
   );
   assert.deepEqual(initial.permissionStatus, {
-    gateway: true,
+    evolink: true,
     openrouter: false,
     jev: false,
-    evolink: false,
   });
   assert.equal(initial.settings.configured, true);
   assert.equal(
@@ -88,21 +87,21 @@ test('provider permissions migrate, gate requests, handle revocation and preserv
   const rating = send({ type: 'classify', post }, true);
   for (let attempt = 0; attempt < 100 && !requests.length; attempt++) await setImmediate();
   assert.equal(requests.length, 1);
-  await permissions.remove({ origins: [PROVIDER_ORIGINS.gateway] });
+  await permissions.remove({ origins: [PROVIDER_ORIGINS.evolink] });
   const revoked = await dashboard();
   assert.equal(revoked.settings.configured, false);
   assert.equal(revoked.settings.permissionRequired, true);
-  assert.equal(revoked.keyStatus.gateway, true);
+  assert.equal(revoked.keyStatus.evolink, true);
   assert.ok(requests[0].signal.aborted, 'Revoking access aborts existing provider work');
   requests[0].resolve(
-    Response.json({ answers: { aiGenerated: { type: 'boolean', probability: 0.12 } } }),
+    Response.json({ answers: [{ name: 'aiGenerated', type: 'predicate', probability: 0.12 }] }),
   );
   assert.notEqual((await rating).status, 'ok', 'Late results after revocation must not be saved');
   assert.equal((await send({ type: 'classify', post }, true)).status, 'setup');
   assert.equal(requests.length, 1);
-  assert.equal(local.keys.gateway, 'saved-gateway-test-key');
+  assert.equal(local.keys.evolink, 'saved-evolink-test-key');
 
-  permissions.grant(PROVIDER_ORIGINS.gateway);
+  permissions.grant(PROVIDER_ORIGINS.evolink);
   assert.equal(
     (await dashboard()).settings.configured,
     true,
@@ -125,10 +124,10 @@ test('provider permissions migrate, gate requests, handle revocation and preserv
     'Removing another provider does not disable the active connection',
   );
 
-  await send({ type: 'disconnect', provider: 'gateway' });
-  assert.equal(local.keys.gateway, undefined);
+  await send({ type: 'disconnect', provider: 'evolink' });
+  assert.equal(local.keys.evolink, undefined);
   assert.equal(
-    permissions.granted.has(PROVIDER_ORIGINS.gateway),
+    permissions.granted.has(PROVIDER_ORIGINS.evolink),
     false,
     'Removing a saved key also releases its permission',
   );

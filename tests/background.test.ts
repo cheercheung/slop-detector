@@ -3,10 +3,11 @@ import { test } from 'vitest';
 import { PROVIDER_ORIGINS } from '../src/shared';
 import { mockPermissions } from './permissions-fixture';
 
-test('migrates legacy keys, serializes settings and restricts credential access', async () => {
+test('drops retired keys, serializes settings and restricts credential access', async () => {
   const local: Record<string, unknown> = {
     apiKey: 'legacy-gateway-test-key',
-    settings: { enabled: false, threshold: 0.8, dimSlop: true },
+    keys: { evolink: 'saved-evolink-test-key', gateway: 'retired-gateway-key' },
+    settings: { provider: 'evolink', enabled: false, threshold: 0.8, dimSlop: true },
   };
   const session: Record<string, unknown> = {
     cache: [null, ['bad-key', {}], ['f'.repeat(64), { probability: 1.5, evaluatedAt: Date.now() }]],
@@ -72,7 +73,7 @@ test('migrates legacy keys, serializes settings and restricts credential access'
     );
   const initial = await send({ type: 'getDashboard' });
   assert.deepEqual(restrictions, ['local:TRUSTED_CONTEXTS', 'session:TRUSTED_CONTEXTS']);
-  assert.deepEqual(local.keys, { gateway: 'legacy-gateway-test-key' });
+  assert.deepEqual(local.keys, { evolink: 'saved-evolink-test-key' });
   assert.equal(local.apiKey, undefined);
   assert.equal(initial.settings.detector, 'jev');
   assert.equal(initial.settings.theme, 'fade');
@@ -118,5 +119,5 @@ test('migrates legacy keys, serializes settings and restricts credential access'
   await send({ type: 'clearCache' });
   assert.ok((await send({ type: 'getSettings' })).cacheEpoch > saved.cacheEpoch);
   await send({ type: 'disconnect', provider: 'jev' });
-  assert.deepEqual(local.keys, { gateway: 'legacy-gateway-test-key' });
+  assert.deepEqual(local.keys, { evolink: 'saved-evolink-test-key' });
 });

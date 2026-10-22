@@ -610,3 +610,13 @@ footer {
 #reset-threshold {
   margin-top: 6px;
 }
+
+.source-credit {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 10px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}

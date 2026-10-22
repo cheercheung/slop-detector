@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 export const providerOrigins = [
-  'https://ai-gateway.vercel.sh/*',
+  'https://direct.evolink.ai/*',
   'https://openrouter.ai/*',
   'https://api.typesafe.ai/*',
 ];

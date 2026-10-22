@@ -7,10 +7,12 @@ import {
   DEFAULT_SETTINGS,
   detectionChanged,
   hasReadableText,
+  isProvider,
   isSlopVerdict,
   isSupportedUrl,
   normalizeSettings,
   type Post,
+  PROVIDERS,
   parsePost,
   postContentKey,
   verdictLabel,
@@ -23,7 +25,7 @@ const post: Post = {
   truncated: false,
 };
 const response = (probability = 0.18) => ({
-  answers: { aiGenerated: { type: 'boolean', probability } },
+  answers: [{ name: 'aiGenerated', type: 'predicate', probability }],
   usage: { inputTokens: 500, outputTokens: 0 },
 });
 
@@ -31,24 +33,20 @@ test('uses the real AI SDK evaluation transport with the expected model, questio
   let calls = 0;
   const transport: typeof fetch = async (input, init) => {
     calls++;
-    assert.equal(String(input), 'https://ai-gateway.vercel.sh/v4/ai/evaluation-model');
+    assert.equal(String(input), 'https://direct.evolink.ai/v1/decisions');
     const headers = new Headers(init?.headers);
-    assert.equal(headers.get('authorization'), 'Bearer test-gateway-key');
-    assert.equal(headers.get('ai-model-id'), 'typesafe-ai/jev');
+    assert.equal(headers.get('authorization'), 'Bearer test-evolink-key');
+    assert.equal(headers.get('ai-model-id'), null);
     const body = JSON.parse(String(init?.body));
-    assert.equal(body.state, post.text);
-    assert.deepEqual(body.questions, {
-      aiGenerated: {
-        type: 'boolean',
-        instructions:
-          'Is this an automated, AI-generated or otherwise low-effort post that offers little value?',
-      },
-    });
-    assert.equal(body.providerOptions.gateway.zeroDataRetention, true);
+    assert.equal(body.input, post.text);
+    assert.equal(body.model, 'gpt-6-luna-decisions');
+    assert.deepEqual(body.questions, [
+      { name: 'aiGenerated', type: 'predicate', instructions: DEFAULT_PROMPT },
+    ]);
     return Response.json(response());
   };
-  const result = await evaluatePost('test-gateway-key', post, undefined, transport, {
-    provider: 'gateway',
+  const result = await evaluatePost('test-evolink-key', post, undefined, transport, {
+    provider: 'evolink',
     prompt: DEFAULT_PROMPT,
   });
   assert.equal(result.probability, 0.18);
@@ -274,4 +272,10 @@ test('Luna defaults use an inclusive 70% threshold; custom thresholds do not inv
   assert.equal(saved.detector, 'gptzero');
   assert.equal(saved.threshold, 0.65);
   assert.equal(saved.language, 'en');
+});
+
+test('only the three supported providers are accepted; retired Gateway settings reset to EvoLink', () => {
+  assert.deepEqual(PROVIDERS, ['evolink', 'openrouter', 'jev']);
+  assert.equal(isProvider('gateway'), false);
+  assert.equal(normalizeSettings({ provider: 'gateway' }).provider, 'evolink');
 });

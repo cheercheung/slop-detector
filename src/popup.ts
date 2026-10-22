@@ -20,7 +20,6 @@ import {
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const keyUrls: Record<Provider, string> = {
-  gateway: 'https://vercel.com/d/ai-gateway',
   openrouter: 'https://openrouter.ai/settings/keys',
   jev: 'https://console.typesafe.ai/',
   evolink: EVOLINK_KEY_URL,
@@ -28,8 +27,8 @@ const keyUrls: Record<Provider, string> = {
 let settings: PublicSettings = { ...DEFAULT_SETTINGS, configured: false, cacheEpoch: 0 };
 const t = (text: string, values?: Record<string, string | number>) =>
   translate(settings.language, text, values);
-let keyStatus: KeyStatus = { gateway: false, openrouter: false, jev: false, evolink: false };
-let permissionStatus: KeyStatus = { gateway: false, openrouter: false, jev: false, evolink: false };
+let keyStatus: KeyStatus = { openrouter: false, jev: false, evolink: false };
+let permissionStatus: KeyStatus = { openrouter: false, jev: false, evolink: false };
 let gptzero: GptzeroStatus = {
   available: !!GPTZERO_PROXY_ORIGIN,
   connected: false,

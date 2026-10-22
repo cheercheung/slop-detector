@@ -1,13 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { rm } from 'node:fs/promises';
 import path from 'node:path';
-import { chromium } from 'playwright';
+import { launchTestBrowser } from './browser-lifecycle.mjs';
 import { mockPermissionPrompts } from './browser-permissions.mjs';
 
-const profile = await mkdtemp(path.join(tmpdir(), 'jev-viewport-test-'));
 const extension = path.resolve('dist');
-const context = await chromium.launchPersistentContext(profile, {
+const { context, profile } = await launchTestBrowser('jev-viewport-test-', {
   channel: 'chromium',
   headless: true,
   viewport: { width: 1000, height: 600 },
@@ -29,14 +27,21 @@ try {
     globalThis.__requests = [];
     globalThis.__held = [];
     globalThis.fetch = async (url, init) => {
-      if (!String(url).startsWith('https://ai-gateway.vercel.sh/'))
+      if (!String(url).startsWith('https://direct.evolink.ai/'))
         throw new Error('Unexpected network host');
-      const data = JSON.parse(init.body);
+      const raw = JSON.parse(init.body);
+      const data = {
+        ...raw,
+        state: raw.input ?? raw.state,
+        questions: Array.isArray(raw.questions)
+          ? Object.fromEntries(raw.questions.map((q) => [q.name, q]))
+          : raw.questions,
+      };
       globalThis.__requests.push(data.state);
       if (data.state.startsWith('Held visible'))
         await new Promise((resolve) => globalThis.__held.push(resolve));
       return Response.json({
-        answers: { aiGenerated: { type: 'boolean', probability: 0.12 } },
+        answers: [{ name: 'aiGenerated', type: 'predicate', probability: 0.12 }],
         usage: { inputTokens: 100, outputTokens: 0 },
       });
     };

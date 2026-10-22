@@ -1,14 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { chromium } from 'playwright';
+import { launchTestBrowser } from './browser-lifecycle.mjs';
 import { mockPermissionPrompts, providerOrigins } from './browser-permissions.mjs';
 
 await mkdir('test-results', { recursive: true });
-const profile = await mkdtemp(path.join(tmpdir(), 'jev-extension-test-'));
 const extensionPath = path.resolve('dist');
-const context = await chromium.launchPersistentContext(profile, {
+const { context, profile } = await launchTestBrowser('jev-extension-test-', {
   channel: 'chromium',
   headless: true,
   viewport: { width: 1160, height: 960 },
@@ -31,13 +29,20 @@ try {
     globalThis.fetch = async (url, init) => {
       if (
         ![
-          'https://ai-gateway.vercel.sh/',
+          'https://direct.evolink.ai/',
           'https://openrouter.ai/api/alpha/decisions',
           'https://api.typesafe.ai/v1/systemone',
         ].some((host) => String(url).startsWith(host))
       )
         throw new Error('Unexpected network host');
-      const data = JSON.parse(init.body);
+      const raw = JSON.parse(init.body);
+      const data = {
+        ...raw,
+        state: raw.input ?? raw.state,
+        questions: Array.isArray(raw.questions)
+          ? Object.fromEntries(raw.questions.map((q) => [q.name, q]))
+          : raw.questions,
+      };
       globalThis.__requests.push({
         url: String(url),
         body: data,
@@ -67,14 +72,14 @@ try {
             : text.includes('borderline')
               ? 0.58
               : 0.12;
-      if (!String(url).startsWith('https://ai-gateway.vercel.sh/'))
+      if (!String(url).startsWith('https://direct.evolink.ai/'))
         return Response.json({
           model: data.model,
           answers: { aiGenerated: { type: 'noul', noul: score } },
           usage: { input_tokens: 550, output_tokens: 0 },
         });
       return Response.json({
-        answers: { aiGenerated: { type: 'boolean', probability: score } },
+        answers: [{ name: 'aiGenerated', type: 'predicate', probability: score }],
         usage: { inputTokens: 550, outputTokens: 0 },
       });
     };
@@ -98,9 +103,9 @@ try {
   await popup.waitForFunction(
     () => document.querySelector('#key-label').textContent === 'Jev (TypeSafe) API key',
   );
-  await popup.locator('#provider').selectOption('gateway');
+  await popup.locator('#provider').selectOption('evolink');
   await popup.waitForFunction(
-    () => document.querySelector('#key-label').textContent === 'AI Gateway API key',
+    () => document.querySelector('#key-label').textContent === 'EvoLink Luna Decision API key',
   );
   assert.equal(
     await worker.evaluate(() => globalThis.__permissionRequests.length),
@@ -116,12 +121,12 @@ try {
   await feed.goto('https://x.com/home');
   const badge = (id) => feed.locator(`#${id} jev-slop-label button.badge`);
   await badge('one').waitFor();
-  assert.match(await badge('one').innerText(), /Connect Jev/);
+  assert.match(await badge('one').innerText(), /Connect Luna Decision/);
   assert.equal(await worker.evaluate(() => globalThis.__requests.length), 0);
   assert.equal(await feed.locator('jev-slop-stamp').count(), 0);
   console.log('PASS: no requests before a key is connected');
 
-  await popup.locator('#api-key').fill('test-only-gateway-key');
+  await popup.locator('#api-key').fill('test-only-evolink-key');
   await worker.evaluate(() => {
     globalThis.__denyNextPermission = true;
   });
@@ -132,7 +137,7 @@ try {
       !document.querySelector('#connect').disabled,
   );
   assert.equal(await worker.evaluate(() => globalThis.__requests.length), 0);
-  assert.equal(await popup.locator('#api-key').inputValue(), 'test-only-gateway-key');
+  assert.equal(await popup.locator('#api-key').inputValue(), 'test-only-evolink-key');
   assert.deepEqual(await worker.evaluate(() => [...globalThis.__providerGrants]), []);
   console.log(
     'PASS: provider access is optional, requested on Connect, and denial sends no API request',
@@ -151,7 +156,13 @@ try {
     'Not slop, 88 percent confidence. Open Slop Detector settings.',
   );
   assert.equal(await badge('one').getAttribute('title'), 'Open Slop Detector settings');
+  await feed.waitForFunction(
+    () => document.querySelector('#two jev-slop-label')?.dataset.tone === 'slop',
+  );
   assert.match(await badge('two').innerText(), /Slop/);
+  await feed.waitForFunction(
+    () => document.querySelector('#three jev-slop-label')?.dataset.tone === 'clean',
+  );
   assert.match(await badge('three').innerText(), /Not slop/);
   assert.equal(await badge('media').isVisible(), false);
   assert.match(await badge('below').getAttribute('aria-label'), /Queued/);
@@ -479,7 +490,7 @@ try {
   await popup.locator('#connection').evaluate((element) => {
     element.open = true;
   });
-  await popup.locator('#api-key').fill('replacement-test-gateway-key');
+  await popup.locator('#api-key').fill('replacement-test-evolink-key');
   await popup.locator('#connect').click();
   await popup.waitForFunction(
     () =>
@@ -571,7 +582,7 @@ try {
       ([key, verdict]) => /^[a-f0-9]{64}$/.test(key) && typeof verdict.probability === 'number',
     ),
   );
-  assert.ok(!JSON.stringify(session).includes('gateway-key'));
+  assert.ok(!JSON.stringify(session).includes('evolink-key'));
   assert.ok(!JSON.stringify(session).includes('customer_id'));
   console.log('PASS: stored cache contains hashes and scores, not post text or API keys');
 
@@ -1119,14 +1130,14 @@ try {
     chrome.storage.local.get(['keys', 'apiKey', 'settings']),
   );
   assert.equal(storedKeys.apiKey, undefined);
-  assert.equal(storedKeys.keys.gateway, 'replacement-test-gateway-key');
+  assert.equal(storedKeys.keys.evolink, 'replacement-test-evolink-key');
   assert.equal(storedKeys.keys.openrouter, 'test-only-openrouter-key');
   assert.equal(storedKeys.keys.jev, 'test-only-jev-key');
   const routed = await worker.evaluate(() =>
     globalThis.__requests.filter((r) => r.body.state === '99% slow response while prompt changes'),
   );
   for (const [host, key] of [
-    ['ai-gateway.vercel.sh', 'replacement-test-gateway-key'],
+    ['direct.evolink.ai', 'replacement-test-evolink-key'],
     ['openrouter.ai', 'test-only-openrouter-key'],
     ['api.typesafe.ai', 'test-only-jev-key'],
   ]) {
@@ -1143,7 +1154,7 @@ try {
     globalThis.__providerGrants.delete(origin);
     globalThis.__denyNextPermission = true;
   }, providerOrigins[0]);
-  await popup.locator('#provider').selectOption('gateway');
+  await popup.locator('#provider').selectOption('evolink');
   await popup.waitForFunction(
     () =>
       document.querySelector('#message').textContent.includes('was not granted') &&
@@ -1187,7 +1198,7 @@ try {
   );
   await popup.locator('#provider').selectOption('openrouter');
   await waitVerdict(replies, '#x-loaded-reply', 'Slop');
-  await popup.locator('#provider').selectOption('gateway');
+  await popup.locator('#provider').selectOption('evolink');
   await waitVerdict(replies, '#x-loaded-reply', 'Slop');
   await popup.locator('#connection').evaluate((element) => {
     element.open = false;
@@ -1252,8 +1263,8 @@ try {
     allQuestions.every(
       (q) =>
         Object.keys(q).length === 1 &&
-        Object.keys(q.aiGenerated).length === 2 &&
-        ['boolean', 'noul'].includes(q.aiGenerated.type) &&
+        Object.keys(q.aiGenerated).length === (q.aiGenerated.type === 'predicate' ? 3 : 2) &&
+        ['predicate', 'noul'].includes(q.aiGenerated.type) &&
         [
           'Is this an automated, AI-generated or otherwise low-effort post that offers little value?',
           'Is this a sales pitch?',
@@ -1272,20 +1283,20 @@ try {
     document
       .querySelector('#below jev-slop-label')
       ?.shadowRoot.querySelector('button')
-      .textContent.includes('Connect Jev'),
+      .textContent.includes('Connect Luna Decision'),
   );
   await linkedin.waitForFunction(() =>
     document
       .querySelector('#li-below jev-slop-label')
       ?.shadowRoot.querySelector('button')
-      .textContent.includes('Connect Jev'),
+      .textContent.includes('Connect Luna Decision'),
   );
   const local = await worker.evaluate(() => chrome.storage.local.get(['apiKey', 'keys']));
   assert.equal(local.apiKey, undefined);
-  assert.equal(local.keys.gateway, undefined);
+  assert.equal(local.keys.evolink, undefined);
   assert.equal(await feed.locator('jev-slop-stamp').count(), 0);
-  await waitVerdict(comments, '[data-case="legacy-reply"]', 'Connect Jev');
-  await waitVerdict(replies, '#x-loaded-reply', 'Connect Jev');
+  await waitVerdict(comments, '[data-case="legacy-reply"]', 'Connect Luna Decision');
+  await waitVerdict(replies, '#x-loaded-reply', 'Connect Luna Decision');
   assert.equal(await linkedin.locator('jev-slop-stamp').count(), 0);
   assert.equal(await comments.locator('jev-slop-stamp').count(), 0);
   assert.equal(await replies.locator('jev-slop-stamp').count(), 0);
@@ -1321,7 +1332,7 @@ try {
   });
   await popup.waitForTimeout(250);
   assert.equal(
-    await worker.evaluate(() => chrome.storage.local.get('keys').then((data) => data.keys.gateway)),
+    await worker.evaluate(() => chrome.storage.local.get('keys').then((data) => data.keys.evolink)),
     'successful-ui-retry-key',
   );
   assert.equal(await popup.locator('#cancel-connection').isVisible(), false);

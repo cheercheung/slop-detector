@@ -1,4 +1,3 @@
-import { createGateway } from '@ai-sdk/gateway';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { type Experimental_EvaluationModel, experimental_evaluate as evaluate } from 'ai';
 import { directLuna } from './luna';
@@ -75,21 +74,16 @@ export async function evaluatePost(
   const transport: typeof fetch = (input, init) =>
     (customFetch ?? fetch)(input, { ...init, credentials: 'omit', redirect: 'error' });
   const model =
-    settings.provider === 'gateway'
-      ? createGateway({ apiKey, fetch: transport }).evaluationModel(PROVIDER_MODELS.gateway)
-      : settings.provider === 'openrouter'
-        ? createOpenRouter({ apiKey, fetch: transport }).evaluationModel(PROVIDER_MODELS.openrouter)
-        : settings.provider === 'evolink'
-          ? directLuna(apiKey, transport)
-          : directJev(apiKey, transport);
+    settings.provider === 'openrouter'
+      ? createOpenRouter({ apiKey, fetch: transport }).evaluationModel(PROVIDER_MODELS.openrouter)
+      : settings.provider === 'evolink'
+        ? directLuna(apiKey, transport)
+        : directJev(apiKey, transport);
   const started = Date.now();
   const result = await evaluate({
     model,
     state: post.text,
     questions: { aiGenerated: { type: 'boolean', instructions: settings.prompt } },
-    ...(settings.provider === 'gateway'
-      ? { providerOptions: { gateway: { zeroDataRetention: true } } }
-      : {}),
     maxRetries: 0,
     abortSignal: signal ?? AbortSignal.timeout(20_000),
   });
@@ -101,7 +95,7 @@ export async function evaluatePost(
 
 export function safeError(
   error: unknown,
-  provider: Provider = 'gateway',
+  provider: Provider = 'evolink',
 ): Extract<Classification, { status: 'error' }> {
   const e = error as { statusCode?: number; name?: string; message?: string };
   const status = e?.statusCode;

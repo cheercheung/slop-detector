@@ -37,13 +37,13 @@
     </section>
     <section id="provider-section" hidden class="provider-section" aria-label="Provider and API key" data-i18n-aria-label="Provider and API key" data-configured="false">
       <p id="status-title" class="status" hidden></p>
-      <div class="row"><label for="provider" data-i18n-text="Provider">Provider</label><select id="provider"><option value="gateway" data-i18n-text="AI Gateway">AI Gateway</option><option value="openrouter" data-i18n-text="OpenRouter">OpenRouter</option><option value="jev" data-i18n-text="Jev (TypeSafe)">Jev (TypeSafe)</option><option value="evolink" data-i18n-text="EvoLink Luna Decision">EvoLink Luna Decision</option></select></div>
+      <div class="row"><label for="provider" data-i18n-text="Provider">Provider</label><select id="provider"><option value="evolink" data-i18n-text="EvoLink Luna Decision">EvoLink Luna Decision</option><option value="openrouter" data-i18n-text="OpenRouter">OpenRouter</option><option value="jev" data-i18n-text="Jev (TypeSafe)">Jev (TypeSafe)</option></select></div>
       <details id="connection" open>
         <summary><span data-i18n-text="API key">API key</span><span id="key-status" class="meta" data-i18n-text="Add key">Add key</span></summary>
         <form id="key-form">
-          <label class="sr-only" id="key-label" for="api-key" data-i18n-text="AI Gateway API key">AI Gateway API key</label>
+          <label class="sr-only" id="key-label" for="api-key" data-i18n-text="EvoLink Luna Decision API key">EvoLink Luna Decision API key</label>
           <div class="key-input"><input id="api-key" type="password" maxlength="1000" placeholder="Paste your API key" data-i18n-placeholder="Paste your API key" autocomplete="off" spellcheck="false" autocapitalize="off" required><button id="show-key" type="button" aria-label="Show API key" data-i18n-aria-label="Show API key" data-i18n-text="Show">Show</button></div>
-          <div class="actions"><a id="get-key" href="https://vercel.com/d/ai-gateway" target="_blank" rel="noreferrer" data-i18n-text="Get a key">Get a key</a><div class="connection-actions"><button type="button" id="cancel-connection" class="text-button" hidden data-i18n-text="Cancel">Cancel</button><button type="submit" id="connect" disabled data-i18n-text="Connect">Connect</button></div></div>
+          <div class="actions"><a id="get-key" href="https://evolink.ai/dashboard/keys?utm_source=github&amp;utm_medium=extension&amp;utm_campaign=slop" target="_blank" rel="noreferrer" data-i18n-text="Get a key">Get a key</a><div class="connection-actions"><button type="button" id="cancel-connection" class="text-button" hidden data-i18n-text="Cancel">Cancel</button><button type="submit" id="connect" disabled data-i18n-text="Connect">Connect</button></div></div>
           <button id="disconnect" class="text-button remove" type="button" hidden data-i18n-text="Remove saved key">Remove saved key</button>
         </form>
       </details>
@@ -68,6 +68,7 @@
     </details>
     <p id="message" class="message" role="status" aria-live="polite" hidden></p>
     <footer id="popup-footer" class="setup-dependent" data-setup-pending="true" inert><a id="attribution" href="https://gptzero.me/" target="_blank" rel="noreferrer" data-i18n-text="Powered by GPTZero">Powered by GPTZero</a><button id="clear-cache" class="text-button" type="button" data-i18n-text="Clear cache">Clear cache</button></footer>
+    <p class="source-credit"><span data-i18n-text="Based on">Based on</span> <a id="source-repository" href="https://github.com/rbilgil/slop-detector" target="_blank" rel="noreferrer">rbilgil/slop-detector</a> · MIT</p>
   </main>
 </body>
 </html>

@@ -1,28 +1,24 @@
-export const MODEL = 'typesafe-ai/jev';
 export const RUBRIC_VERSION = '4-custom-prompts';
 export const DEFAULT_PROMPT =
   'Is this an automated, AI-generated or otherwise low-effort post that offers little value?';
 export const MAX_PROMPT = 2000;
-export const PROVIDERS = ['gateway', 'openrouter', 'jev', 'evolink'] as const;
+export const PROVIDERS = ['evolink', 'openrouter', 'jev'] as const;
 export type Language = 'auto' | 'en' | 'zh-CN';
 export const EVOLINK_KEY_URL =
   'https://evolink.ai/dashboard/keys?utm_source=github&utm_medium=extension&utm_campaign=slop';
 export type Provider = (typeof PROVIDERS)[number];
 export type KeyProvider = Provider | 'gptzero';
 export const PROVIDER_NAMES: Record<Provider, string> = {
-  gateway: 'AI Gateway',
   openrouter: 'OpenRouter',
   jev: 'Jev (TypeSafe)',
   evolink: 'EvoLink Luna Decision',
 };
 export const PROVIDER_ORIGINS: Record<Provider, string> = {
-  gateway: 'https://ai-gateway.vercel.sh/*',
   openrouter: 'https://openrouter.ai/*',
   jev: 'https://api.typesafe.ai/*',
   evolink: 'https://direct.evolink.ai/*',
 };
 export const PROVIDER_MODELS: Record<Provider, string> = {
-  gateway: MODEL,
   openrouter: 'typesafe/jev-1.13',
   jev: 'jev-latest',
   evolink: 'gpt-6-luna-decisions',

@@ -54,6 +54,7 @@ jobs:
       - run: npm run build
       - run: npm run test:proxy
       - run: npm run test:browser
+      - run: npm run test:customization
       - run: npm run test:gptzero
 
   secrets:

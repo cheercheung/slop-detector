@@ -4,9 +4,9 @@
   "license": "MIT",
   "source_post": "https://x.com/RBilgil/status/2100976648552169805",
   "source_verification": "Original X direct read returned 403; confirmed repository, author/project docs and indexed source mapping; no performance/price claim revalidated.",
-  "local_branch": "local/evolink-luna-decision",
   "adapted_at": "2026-10-21",
   "customized_at": "2026-10-22",
   "live_api_calls": 0,
-  "published": false
+  "repository": "https://github.com/cheercheung/slop-detector",
+  "branch": "main"
 }

@@ -9,6 +9,7 @@ export function resolveLanguage(language: Language): 'en' | 'zh-CN' {
 
 const chinese: Record<string, string> = {
   Language: '语言',
+  'Based on': '原仓库：',
   ' · Saved': ' · 已保存',
   'Browser language': '跟随浏览器',
   'Enable real-time scanning': '启用实时检测',

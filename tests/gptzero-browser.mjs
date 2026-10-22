@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { build } from 'esbuild';
 import { convertV4MiniflareOptions, Miniflare } from 'miniflare';
-import { chromium } from 'playwright';
+import { launchTestBrowser } from './browser-lifecycle.mjs';
 import { mockPermissionPrompts, providerOrigins } from './browser-permissions.mjs';
 
 const temp = await mkdtemp(path.join(tmpdir(), 'slop-gptzero-e2e-'));
@@ -115,7 +115,7 @@ try {
     stdio: 'pipe',
   });
   const extension = path.resolve('dist-test');
-  context = await chromium.launchPersistentContext(`${temp}/profile`, {
+  ({ context } = await launchTestBrowser('slop-gptzero-browser-', {
     channel: 'chromium',
     headless: true,
     viewport: { width: 1000, height: 700 },
@@ -124,7 +124,7 @@ try {
       `--load-extension=${extension}`,
       '--ignore-certificate-errors',
     ],
-  });
+  }));
   context.setDefaultTimeout(15000);
   const worker = context.serviceWorkers()[0] || (await context.waitForEvent('serviceworker'));
   const id = new URL(worker.url()).host;
@@ -142,6 +142,9 @@ try {
   const popup = await context.newPage();
   popup.on('pageerror', (e) => errors.push(e.message));
   await popup.goto(`chrome-extension://${id}/popup.html`);
+  await popup.evaluate(() =>
+    chrome.runtime.sendMessage({ type: 'saveSettings', settings: { detector: 'gptzero' } }),
+  );
   await popup.waitForFunction(
     () => document.querySelector('#detector-gptzero').getAttribute('aria-pressed') === 'true',
   );
@@ -298,11 +301,11 @@ try {
     const original = globalThis.fetch;
     globalThis.__jevRequests = [];
     globalThis.fetch = async (url, init) => {
-      if (!String(url).startsWith('https://ai-gateway.vercel.sh/')) return original(url, init);
+      if (!String(url).startsWith('https://direct.evolink.ai/')) return original(url, init);
       const body = JSON.parse(init.body);
       globalThis.__jevRequests.push(body);
       return Response.json({
-        answers: { aiGenerated: { type: 'boolean', probability: 0.12 } },
+        answers: [{ name: 'aiGenerated', type: 'predicate', probability: 0.12 }],
         usage: { inputTokens: 100, outputTokens: 0 },
       });
     };
@@ -323,11 +326,13 @@ try {
       ?.shadowRoot.querySelector('.badge')
       .textContent.includes('Not slop'),
   );
-  assert.equal(await popup.locator('#attribution').innerText(), 'Powered by Jev');
+  assert.equal(await popup.locator('#attribution').innerText(), 'Powered by EvoLink Luna Decision');
   assert.equal(await badge(4).getAttribute('title'), 'Open Slop Detector settings');
   assert.ok(
-    (await worker.evaluate(() => globalThis.__jevRequests)).some(
-      (r) => r.questions.aiGenerated.instructions === 'Is this a sales pitch?',
+    (await worker.evaluate(() => globalThis.__jevRequests)).some((r) =>
+      r.questions.some(
+        (q) => q.name === 'aiGenerated' && q.instructions === 'Is this a sales pitch?',
+      ),
     ),
   );
   await popup.locator('#detector-gptzero').click();
@@ -341,7 +346,7 @@ try {
   assert.equal(await popup.locator('#prompt').inputValue(), 'Is this a sales pitch?');
   assert.equal(calls.length, 3);
   console.log(
-    'PASS: explicit Jev switch works after GPTZero quota, retains custom prompt/key and keeps caches isolated',
+    'PASS: explicit EvoLink switch works after GPTZero quota, retains custom prompt/key and keeps caches isolated',
   );
 
   await worker.evaluate(() => {

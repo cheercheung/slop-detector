@@ -1,13 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { chromium } from 'playwright';
+import { launchTestBrowser } from './browser-lifecycle.mjs';
 import { mockPermissionPrompts } from './browser-permissions.mjs';
 
-const profile = await mkdtemp(path.join(tmpdir(), 'jev-loading-test-'));
 const extension = path.resolve('dist');
-const context = await chromium.launchPersistentContext(profile, {
+const { context, profile } = await launchTestBrowser('jev-loading-test-', {
   channel: 'chromium',
   headless: true,
   viewport: { width: 900, height: 800 },
@@ -48,13 +46,14 @@ try {
   await worker.evaluate(() => {
     globalThis.__held = [];
     globalThis.fetch = async (url, init) => {
-      if (!String(url).startsWith('https://ai-gateway.vercel.sh/'))
+      if (!String(url).startsWith('https://direct.evolink.ai/'))
         throw new Error('Unexpected provider host');
-      const { state } = JSON.parse(init.body);
+      const data = JSON.parse(init.body);
+      const state = data.input ?? data.state;
       if (!state.startsWith('The library closes'))
         await new Promise((resolve) => globalThis.__held.push(resolve));
       return Response.json({
-        answers: { aiGenerated: { type: 'boolean', probability: 0.12 } },
+        answers: [{ name: 'aiGenerated', type: 'predicate', probability: 0.12 }],
         usage: { inputTokens: 100, outputTokens: 0 },
       });
     };
@@ -134,7 +133,7 @@ try {
             1,
             'Loading copy is accessible without appearing in the feed',
           );
-          assert.equal(state.label, 'Checking with Jev');
+          assert.equal(state.label, 'Checking with Luna Decision');
           assert.equal(state.position, 'relative');
           assert.equal(state.height, 24);
           assert.ok(

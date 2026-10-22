@@ -62,6 +62,17 @@ try {
   assert.equal(await popup.locator('#threshold').inputValue(), '70');
   const keyLink =
     'https://evolink.ai/dashboard/keys?utm_source=github&utm_medium=extension&utm_campaign=slop';
+  assert.deepEqual(
+    await popup
+      .locator('#provider option')
+      .evaluateAll((options) => options.map((option) => option.value)),
+    ['evolink', 'openrouter', 'jev'],
+  );
+  assert.equal(
+    await popup.locator('#source-repository').getAttribute('href'),
+    'https://github.com/rbilgil/slop-detector',
+  );
+  assert.equal(await popup.locator('#source-repository').isVisible(), true);
   assert.equal(await popup.locator('#get-key').getAttribute('href'), keyLink);
   assert.equal(await popup.locator('#attribution').getAttribute('href'), keyLink);
   await popup.locator('#language').selectOption('zh-CN');
